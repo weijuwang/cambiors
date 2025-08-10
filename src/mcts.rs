@@ -116,8 +116,8 @@ impl MonteCarloNode {
         game: &cambio::PartialInfoGame,
         rng: &mut cambio::CambioRng
     ) {
-        let mut det = cambio::DeterminizedGame::randomized_from(&game, rng);
-        let new_node = Self::select_and_expand(&node, &mut det, rng);
+        let mut det = cambio::DeterminizedGame::randomized_from(game, rng);
+        let new_node = Self::select_and_expand(node, &mut det, rng);
 
         let winners = loop {
             // Try to randomly choose an action
@@ -156,7 +156,7 @@ impl MonteCarloNode {
             let expanded_node = MonteCarloNode::new(
                 game,
                 Some(unexpanded_action),
-                Rc::downgrade(&node)
+                Rc::downgrade(node)
             );
 
             // Add the node to [children]

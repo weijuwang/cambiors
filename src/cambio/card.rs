@@ -47,10 +47,10 @@ impl Card {
     /// If either both or none of [a] and [b] are [Some], [Err] is returned.
     pub fn pick_known(a: Option<Card>, b: Option<Card>) -> Result<Card, ()> {
        if let Some(a) = a
-            && b == None
+            && b.is_none()
         {
             Ok(a)
-        } else if a == None
+        } else if a.is_none()
             && let Some(b) = b
         {
             Ok(b)

@@ -25,7 +25,7 @@ pub struct Game<UnderlyingCard: UnderlyingCardType> {
     /// The cards that each player has as well as who has seen them.
     ///
     /// See [CardAndVisibility].
-    player_cards: FastJaggedVec<UnderlyingCard>,
+    cards: FastJaggedVec<UnderlyingCard>,
 
     /// The player who called "Cambio".
     cambio_caller: Option<Player>,
@@ -46,7 +46,7 @@ impl<UnderlyingCard: UnderlyingCardType + Copy> Game<UnderlyingCard> {
     /// player_card_indices(2) == 0..5
     /// ```
     fn player_card_indices(&self, player: Player) -> Range<usize> {
-        0..self.player_cards.player_num_cards(player)
+        0..self.cards[player].len()
     }
 
     /// Increments the turn, rolling back to `0` if necessary.
@@ -75,7 +75,7 @@ impl<UnderlyingCard: UnderlyingCardType + Copy> Game<UnderlyingCard> {
 
     /// The number of players in the game.
     pub fn num_players(&self) -> usize {
-        self.player_cards.num_players()
+        self.cards.num_players()
     }
 
     /// Returns the next state after discarding a card.
@@ -101,7 +101,7 @@ impl<UnderlyingCard: UnderlyingCardType + Copy> Game<UnderlyingCard> {
             (_, Action::StickWithoutGiveAway(stick_position)) => {
                 // Execute the stick
                 self.already_stuck = true;
-                self.player_cards.remove_at(stick_position);
+                self.cards.remove_at(stick_position);
                 self.discard_pile.push(
                     *self.discard_pile.last()
                         .expect("Cannot stick without something on the discard pile")
@@ -140,7 +140,7 @@ impl<UnderlyingCard: UnderlyingCardType + Copy> Game<UnderlyingCard> {
                         Ordering::Equal =>
                             State::AfterDiscardBlackKing,
                         // ~~~ SCENARIO A ~~~
-                        // [peeked_position] points to something different than what it did originally
+                        // [peeked_position] points to something different from what it did originally
                         // because everything got shifted over
                         Ordering::Greater =>
                             State::AfterBlackKingPeeked(CardPosition {
@@ -153,7 +153,7 @@ impl<UnderlyingCard: UnderlyingCardType + Copy> Game<UnderlyingCard> {
             (_, Action::StickWithGiveAway { stick_position, give_away_position }) => {
                 // Execute the stick
                 self.already_stuck = true;
-                self.player_cards.remove_at(stick_position);
+                self.cards.remove_at(stick_position);
                 self.discard_pile.push(
                     *self.discard_pile.last()
                         .expect("Cannot stick without something on the discard pile")
@@ -174,7 +174,7 @@ impl<UnderlyingCard: UnderlyingCardType + Copy> Game<UnderlyingCard> {
                             Ordering::Equal =>
                                 State::AfterDiscardBlackKing,
                             // ~~~ SCENARIO A ~~~
-                            // [peeked_position] points to something different than what it did originally
+                            // [peeked_position] points to something different from what it did originally
                             // because everything got shifted over
                             Ordering::Greater =>
                                 State::AfterBlackKingPeeked(CardPosition {
@@ -197,9 +197,8 @@ impl<UnderlyingCard: UnderlyingCardType + Copy> Game<UnderlyingCard> {
                                     player: stick_position.player,
                                     // This is the CURRENT number of cards they have; they will have
                                     // one more than this after the give-away
-                                    index: self.player_cards
-                                        .player_num_cards(stick_position.player as Player)
-                                        as u8
+                                    index: self.cards[stick_position.player as Player]
+                                        .len() as u8
                                 }),
                             // ~~~ SCENARIO A ~~
                             // [peeked_position] points to something different from what it
@@ -214,7 +213,7 @@ impl<UnderlyingCard: UnderlyingCardType + Copy> Game<UnderlyingCard> {
                 } else { self.state };
 
                 // Execute giveaway
-                self.player_cards
+                self.cards
                     .move_card_to_player(give_away_position, stick_position.player as Player);
 
                 Some(new_state)
@@ -228,31 +227,31 @@ impl<UnderlyingCard: UnderlyingCardType + Copy> Game<UnderlyingCard> {
 
             (State::AfterDiscard7Or8, Action::Peek(position))
             if position.player == self.turn as u8 => {
-                self.player_cards[position].show_to(self.turn);
+                self.cards[position].show_to(self.turn);
                 Some(State::EndOfTurn)
             }
 
             (State::AfterDiscard9Or10, Action::Peek(position))
             if position.player != self.turn as u8 => {
-                self.player_cards[position].show_to(self.turn);
+                self.cards[position].show_to(self.turn);
                 Some(State::EndOfTurn)
             }
 
             (State::AfterDiscardFace, Action::BlindSwitch(pos_a, pos_b))
             if pos_a.player != pos_b.player => {
-                self.player_cards.swap(pos_a, pos_b);
+                self.cards.swap(pos_a, pos_b);
                 Some(State::EndOfTurn)
             }
 
             (State::AfterBlackKingPeeked(peeked_card), Action::BlindSwitch(pos_a, pos_b))
             if pos_a == peeked_card => {
-                self.player_cards.swap(pos_a, pos_b);
+                self.cards.swap(pos_a, pos_b);
                 Some(State::EndOfTurn)
             }
 
             (State::AfterDiscardBlackKing, Action::Peek(position))
             if position.player != self.turn as u8 => {
-                self.player_cards[position].show_to(self.turn);
+                self.cards[position].show_to(self.turn);
                 Some(State::AfterBlackKingPeeked(position))
             }
 
@@ -262,7 +261,7 @@ impl<UnderlyingCard: UnderlyingCardType + Copy> Game<UnderlyingCard> {
                 State::AfterDiscardFace |
                 State::AfterDiscardBlackKing |
                 State::AfterBlackKingPeeked(_),
-                Action::SkipAction
+                Action::SkipOptional
             ) => Some(State::EndOfTurn),
 
             (State::EndOfTurn, Action::EndTurn) => {
@@ -289,13 +288,13 @@ impl<UnderlyingCard: UnderlyingCardType + Copy> Index<CardPosition> for Game<Und
     type Output = CardAndVisibility<UnderlyingCard>;
 
     fn index(&self, card: CardPosition) -> &Self::Output {
-        &self.player_cards[card]
+        &self.cards[card]
     }
 }
 
 impl<UnderlyingCard: UnderlyingCardType + Copy> IndexMut<CardPosition> for Game<UnderlyingCard> {
     fn index_mut(&mut self, card: CardPosition) -> &mut Self::Output {
-        &mut self.player_cards[card]
+        &mut self.cards[card]
     }
 }
 
@@ -319,7 +318,7 @@ impl DeterminizedGame {
             discard_pile: partial_info.discard_pile.clone(),
 
             // Determinize unknown cards
-            player_cards: partial_info.player_cards.determinized(&mut draw_pile, rng),
+            cards: partial_info.cards.determinized(&mut draw_pile, rng),
 
             cambio_caller: partial_info.cambio_caller,
 
@@ -349,7 +348,7 @@ impl DeterminizedGame {
 
     /// Returns the number of points each player currently has.
     pub fn scores(&self) -> Vec<i32> {
-        self.player_cards.scores()
+        self.cards.scores()
     }
 
     /// Returns the list of players who won or tied for winning the game.
@@ -389,9 +388,7 @@ impl DeterminizedGame {
         let drawn_card = remove_random_from(&mut self.unseen_cards, rng);
 
         if self.unseen_cards.is_empty() {
-            self.unseen_cards.extend(
-                self.discard_pile.drain(..)
-            );
+            self.unseen_cards.append(&mut self.discard_pile);
 
             // Still empty, meaning discard pile had nothing and the game is effectively over
             // because no draws can happen
@@ -409,13 +406,13 @@ impl DeterminizedGame {
     ///
     /// These two filters save time on two accounts:
     /// - We don't waste time considering false sticks, which are legal but unlikely to happen on
-    /// purpose. If it's on accident, it essentially always improves our chances of winning, so we
-    /// are better off assuming people won't sabotage themselves by making false sticks
-    /// deliberately.
+    ///   purpose. If it's on accident, it essentially always improves our chances of winning, so we
+    ///   are better off assuming people won't sabotage themselves by making false sticks
+    ///   deliberately.
     /// - We don't waste time considering any sticks, even valid sticks, on cards that the player
-    /// sticking has not seen. This results from the assumption that players will only stick cards
-    /// that they know to be valid sticks, so if they haven't seen a card they won't try to stick
-    /// it.
+    ///   sticking has not seen. This results from the assumption that players will only stick cards
+    ///   that they know to be valid sticks, so if they haven't seen a card they won't try to stick
+    ///   it.
     fn extend_with_realistic_sticks(&self, actions: &mut Vec<Action>) {
         if self.already_stuck {
             return;
@@ -425,7 +422,7 @@ impl DeterminizedGame {
         let card_to_match = *self.discard_pile.last()
             .expect("Discard pile shouldn't be empty");
 
-        actions.extend(self.player_cards.enumerate()
+        actions.extend(self.cards.enumerate()
             .into_iter()
             // Filter to valid sticks only
             .filter_map(|(position, card)|
@@ -501,13 +498,13 @@ impl DeterminizedGame {
                 );
 
                 self.extend_with_realistic_sticks(&mut actions);
-                actions.push(Action::SkipAction);
+                actions.push(Action::SkipOptional);
                 actions
             }
 
             State::AfterDiscard9Or10 | State::AfterDiscardBlackKing => {
                 let mut actions = Vec::from_iter(
-                    self.player_cards.positions_from_player(0)
+                    self.cards.positions_from_player(0)
                         .into_iter()
                         // Remove own cards
                         .filter_map(|position|
@@ -520,16 +517,16 @@ impl DeterminizedGame {
                 );
 
                 self.extend_with_realistic_sticks(&mut actions);
-                actions.push(Action::SkipAction);
+                actions.push(Action::SkipOptional);
                 actions
             }
 
             State::AfterDiscardFace => {
                 let mut actions: Vec<Action> =
-                    self.player_cards.positions_from_player(0)
+                    self.cards.positions_from_player(0)
                         .into_iter()
                         .flat_map(|position_a|
-                            self.player_cards.positions_from_player(position_a.player as Player + 1)
+                            self.cards.positions_from_player(position_a.player as Player + 1)
                                 .into_iter()
                                 .filter_map(|position_b|
                                     // Cambio caller can't be affected by swaps
@@ -546,7 +543,7 @@ impl DeterminizedGame {
                         .collect();
 
                 self.extend_with_realistic_sticks(&mut actions);
-                actions.push(Action::SkipAction);
+                actions.push(Action::SkipOptional);
                 actions
             }
 
@@ -565,7 +562,7 @@ impl DeterminizedGame {
                     };
 
                 self.extend_with_realistic_sticks(&mut actions);
-                actions.push(Action::SkipAction);
+                actions.push(Action::SkipOptional);
                 actions
             }
 
@@ -604,13 +601,13 @@ impl DeterminizedGame {
             }
 
             (State::AfterDrawing(drawn_card), Action::Swap(position)
-            ) if !self.player_cards[self.turn].is_empty() => {
+            ) if !self.cards[self.turn].is_empty() => {
                 // Add the original card at [position] to the discard pile
                 self.discard_pile.push(
-                    self.player_cards[position].value()
+                    self.cards[position].value()
                 );
                 // Replace the card at [position] and indicate it's been seen by this player
-                self.player_cards[position] =
+                self.cards[position] =
                     CardAndVisibility::new_seen_by_one(*drawn_card, self.turn);
 
                 State::EndOfTurn
@@ -653,13 +650,12 @@ impl PartialInfoGame {
             ].into_iter()
                 // Map to collection of &Card
                 .flat_map(|(card, freq)|
-                    iter::repeat(card).take(freq)
+                    iter::repeat_n(card, freq)
                 )
-                .into_iter()
                 // Collect into Vec<Card>
                 .collect::<Vec<Card>>(),
 
-            player_cards: FastJaggedVec::new(num_players, bottom_left, bottom_right),
+            cards: FastJaggedVec::new(num_players, bottom_left, bottom_right),
             already_stuck: false,
             cambio_caller: None,
             state: State::BeginningOfTurn
@@ -693,16 +689,14 @@ impl PartialInfoGame {
         // TODO This is an expensive way of finding whether the draw pile is empty. However, it is easier to code given Rust's restrictions on OOP, and we don't care about speed because it's not in [DeterminizedGame]. I would like to find a more elegant way to do this in the future.
         // Find the number of unseen cards among players' piles. If the total number of unseen cards
         // is equal to this then it means there are no cards in the draw pile and we need to reshuffle.
-        let num_unseen_player_cards = self.player_cards
+        let num_unseen_player_cards = self.cards
             .flatten()
-            .into_iter()
+            .iter()
             .filter(|exposed_card| exposed_card.value().is_none())
             .count();
 
         if self.unseen_cards.len() <= num_unseen_player_cards {
-            self.unseen_cards.extend(
-                self.discard_pile.drain(..)
-            );
+            self.unseen_cards.append(&mut self.discard_pile);
         }
 
         Some(card_drawn)
@@ -733,15 +727,15 @@ impl PartialInfoGame {
             }
 
             (State::AfterDrawing(drawn_card), Action::Swap(position)
-            ) if !self.player_cards[self.turn].is_empty() => {
+            ) if !self.cards[self.turn].is_empty() => {
                 // Try to find the original card at [position] or get it from [revealed_card]
-                match Card::pick_known(self.player_cards[position].value(), revealed_card) {
+                match Card::pick_known(self.cards[position].value(), revealed_card) {
                     Ok(known_replaced_card) => {
                         // Add the original card at [position] to the discard pile
                         self.discard_pile.push(known_replaced_card);
 
                         // Replace the card at [position] and indicate it's been seen by this player
-                        self.player_cards[position] =
+                        self.cards[position] =
                             CardAndVisibility::new_seen_by_one(*drawn_card, self.turn);
                     }
                     Err(()) => return Err(())

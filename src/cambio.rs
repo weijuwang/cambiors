@@ -78,7 +78,7 @@ pub enum Action {
     CallCambio,
 
     /// Skip an optional action.
-    SkipAction,
+    SkipOptional,
 
     /// Pass the turn to the next player, prohibiting anyone from sticking.
     EndTurn

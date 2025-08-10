@@ -60,11 +60,6 @@ impl<T: UnderlyingCardType + Copy> FastJaggedVec<T> {
             .collect()
     }
 
-    /// Returns the number of cards a player has.
-    pub fn player_num_cards(&self, player: Player) -> usize {
-        self.player_start_indices[player + 1] - self.player_start_indices[player]
-    }
-
     /// Swaps two cards.
     pub fn swap(&mut self, a: CardPosition, b: CardPosition) {
         let idx_a = self.raw_index(a);
@@ -90,7 +85,7 @@ impl<T: UnderlyingCardType + Copy> FastJaggedVec<T> {
         self.cards.insert(self.player_start_indices[player + 1], card);
 
         // Shift player indices over
-        for i in (player as usize + 1) ..= self.num_players() {
+        for i in (player + 1) ..= self.num_players() {
             self.player_start_indices[i] += 1;
         }
     }
@@ -199,8 +194,8 @@ impl<T: UnderlyingCardType> Index<Player> for FastJaggedVec<T> {
     type Output = [CardAndVisibility<T>];
 
     fn index(&self, player: Player) -> &Self::Output {
-        let start = self.player_start_indices[player as usize];
-        let end = self.player_start_indices[player as usize + 1];
+        let start = self.player_start_indices[player];
+        let end = self.player_start_indices[player + 1];
 
         &self.cards[start..end]
     }
@@ -208,8 +203,8 @@ impl<T: UnderlyingCardType> Index<Player> for FastJaggedVec<T> {
 
 impl<T: UnderlyingCardType> IndexMut<Player> for FastJaggedVec<T> {
     fn index_mut(&mut self, player: Player) -> &mut Self::Output {
-        let start = self.player_start_indices[player as usize];
-        let end = self.player_start_indices[player as usize + 1];
+        let start = self.player_start_indices[player];
+        let end = self.player_start_indices[player + 1];
 
         &mut self.cards[start..end]
     }
