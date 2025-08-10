@@ -45,7 +45,7 @@ impl<UnderlyingCard: UnderlyingCardType + Copy> Game<UnderlyingCard> {
     /// ```
     /// player_card_indices(2) == 0..5
     /// ```
-    fn player_card_indices(&self, player: Player) -> Range<Player> {
+    fn player_card_indices(&self, player: Player) -> Range<usize> {
         0..self.player_cards.player_num_cards(player)
     }
 
@@ -344,13 +344,18 @@ impl DeterminizedGame {
             }
 
             State::AfterBlackKingPeeked(position) => {
-                // TODO Cambio caller cannot be affected by swaps
-                let mut actions = Vec::from_iter(
-                    self.player_card_indices(self.turn)
-                        .map(|index|
-                            Action::BlindSwitch(position, CardPosition { player: self.turn as u8, index: index as u8 })
+                let mut actions =
+                    // Cambio caller cannot be affected by swaps
+                    if Some(position.player as Player) == self.cambio_caller {
+                        vec![]
+                    } else {
+                        Vec::from_iter(
+                            self.player_card_indices(self.turn)
+                                .map(|index|
+                                    Action::BlindSwitch(position, CardPosition { player: self.turn as u8, index: index as u8 })
+                                )
                         )
-                );
+                    };
 
                 self.extend_with_realistic_sticks(&mut actions);
                 actions.push(Action::SkipAction);
