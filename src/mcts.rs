@@ -24,7 +24,6 @@ pub fn search_from(
 
     for (action, child) in root.borrow().children.borrow().iter() {
         let child_borrowed = child.borrow();
-        println!("{:?} -> {} ({}/{})", action, child_borrowed.winrate(), child_borrowed.wins, child_borrowed.playouts);
     }
 
     root.borrow()
