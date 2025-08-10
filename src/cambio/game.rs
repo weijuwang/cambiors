@@ -63,7 +63,7 @@ impl<UnderlyingCard: UnderlyingCardType + Copy> Game<UnderlyingCard> {
     pub fn turn(&self) -> Player {
         self.turn
     }
-    
+
     /// The player who previously moved.
     pub fn prev_turn(&self) -> Player {
         if self.turn <= 0 {
@@ -72,7 +72,7 @@ impl<UnderlyingCard: UnderlyingCardType + Copy> Game<UnderlyingCard> {
             self.turn - 1
         }
     }
-    
+
     /// The number of players in the game.
     pub fn num_players(&self) -> usize {
         self.player_cards.num_players()
@@ -223,7 +223,10 @@ impl DeterminizedGame {
             .into_iter()
             // Filter to valid sticks only
             .filter_map(|(position, card)|
-                if card.value() == card_to_match {
+                if card.value() == card_to_match
+                    // Cambio caller cannot be affected by sticks
+                    && self.cambio_caller != Some(position.player as Player)
+                {
                     Some(
                         // Find all players who can see this card and let them stick it
                         (0..self.num_players())
@@ -319,10 +322,17 @@ impl DeterminizedGame {
                     self.player_cards.positions_from_player(0)
                         .into_iter()
                         .flat_map(|position_a|
-                            self.player_cards.positions_from_player(position_a.player as usize)
+                            self.player_cards.positions_from_player(position_a.player as Player)
                                 .into_iter()
-                                .map(|position_b|
-                                    Action::BlindSwitch(position_a, position_b)
+                                .filter_map(|position_b|
+                                    // Cambio caller can't be affected by swaps
+                                    if Some(position_a.player as Player) == self.cambio_caller
+                                        || Some(position_b.player as Player) == self.cambio_caller
+                                    {
+                                        None
+                                    } else {
+                                        Some(Action::BlindSwitch(position_a, position_b))
+                                    }
                                 )
                                 .collect::<Vec<_>>()
                         )
@@ -334,6 +344,7 @@ impl DeterminizedGame {
             }
 
             State::AfterBlackKingPeeked(position) => {
+                // TODO Cambio caller cannot be affected by swaps
                 let mut actions = Vec::from_iter(
                     self.player_card_indices(self.turn)
                         .map(|index|
