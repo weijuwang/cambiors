@@ -593,7 +593,7 @@ impl PartialInfoGame {
     ///
     /// [bottom_left] and [bottom_right] are the cards that player 0 gets to see at the beginning of
     /// the game. They are stored in indices 2 and 3 respectively.
-    pub fn new(num_players: usize, first_player: Player, bottom_left: Card, bottom_right: Card) -> Self {
+    pub fn new(num_players: usize, first_player: Player, jokers: bool, bottom_left: Card, bottom_right: Card) -> Self {
         let mut result = Self {
             turn: first_player,
             discard_pile: Vec::new(),
@@ -613,7 +613,7 @@ impl PartialInfoGame {
                 (Card::Queen, 4),
                 (Card::BlackKing, 2),
                 (Card::RedKing, 2),
-                (Card::Joker, 2),
+                (Card::Joker, if jokers { 2 } else { 0 }),
             ].into_iter()
                 // Map to collection of &Card
                 .flat_map(|(card, freq)|
