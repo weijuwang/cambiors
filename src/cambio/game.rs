@@ -66,7 +66,7 @@ impl<UnderlyingCard: UnderlyingCardType + Copy> Game<UnderlyingCard> {
 
     /// The player who previously moved.
     pub fn prev_turn(&self) -> Player {
-        if self.turn <= 0 {
+        if self.turn == 0 {
             self.num_players() - 1
         } else {
             self.turn - 1
