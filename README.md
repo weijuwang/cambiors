@@ -2,7 +2,7 @@
 
 This project contains an API for the card game Cambio, a Monte Carlo search to determine the best move from any position even when most cards are unknown, and a REPL to use the Monte Carlo search as a Cambio bot.
 
-I previously coded part of this in C (see my repo [cambio](https://github.com/weijuwang/cambio)) and Kotlin (see [sparklingWater](https://github.com/weijuwang/sparklingWater)). C is unfortunately too unsafe, hard to write in, and probably not much faster than Rust if at all, so I abandoned it. I pretty much finished the Kotlin version, but it's slow, not completely safe, and janky because it's Kotlin. Rust seemed like the best of all worlds: Speed, safety, and easy to code in.
+I previously coded part of this in C (see my repo [cambio](https://github.com/weijuwang/cambio)) and Kotlin (see [sparklingWater](https://github.com/weijuwang/sparklingWater)). C is unfortunately too unsafe, hard to write in, and probably not much faster than Rust if at all, so I abandoned it. I pretty much finished the Kotlin version, but it's slow, not completely safe, and janky because it's Kotlin. Rust seemed like the best of all worlds: fast, safe, and easy to code in.
 
 ## Rules
 
