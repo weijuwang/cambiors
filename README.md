@@ -1,4 +1,4 @@
-# cambio
+# cambiors
 
 This project contains an API for the card game Cambio, a Monte Carlo search to determine the best move from any position even when most cards are unknown, and a REPL to use the Monte Carlo search as a Cambio bot.
 
