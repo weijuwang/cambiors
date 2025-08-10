@@ -1,3 +1,5 @@
+use std::fmt::Display;
+use std::str::FromStr;
 use super::*;
 
 /// Card types that are considered unique within the game of Cambio.
@@ -55,6 +57,54 @@ impl Card {
         } else {
             Err(())
         }
+    }
+}
+
+impl FromStr for Card {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "a" | "1" => Ok(Card::Ace),
+            "2" => Ok(Card::Two),
+            "3" => Ok(Card::Three),
+            "4" => Ok(Card::Four),
+            "5" => Ok(Card::Five),
+            "6" => Ok(Card::Six),
+            "7" => Ok(Card::Seven),
+            "8" => Ok(Card::Eight),
+            "9" => Ok(Card::Nine),
+            "x" | "10" => Ok(Card::Ten),
+            "j" => Ok(Card::Jack),
+            "q" => Ok(Card::Queen),
+            "b" | "bk" => Ok(Card::BlackKing),
+            "r" | "rk" => Ok(Card::RedKing),
+            "0" | "joker" => Ok(Card::Joker),
+            _ => Err(()),
+        }
+    }
+}
+
+impl Display for Card {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let str = String::from(match self {
+            Card::Ace => "A",
+            Card::Two => "2",
+            Card::Three => "3",
+            Card::Four => "4",
+            Card::Five => "5",
+            Card::Six => "6",
+            Card::Seven => "7",
+            Card::Eight => "8",
+            Card::Nine => "9",
+            Card::Ten => "10",
+            Card::Jack => "J",
+            Card::Queen => "Q",
+            Card::BlackKing => "bK",
+            Card::RedKing => "rK",
+            Card::Joker => "Joker",
+        });
+        write!(f, "{}", str)
     }
 }
 
@@ -135,4 +185,35 @@ pub struct CardPosition {
     pub player: u8,
     /// The index of the card within [player]'s cards that this [CardPosition] identifies.
     pub index: u8
+}
+
+impl FromStr for CardPosition {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let coords: Vec<&str> = s
+            .split('.')
+            .collect();
+
+        if coords.len() != 2 {
+            return Err(());
+        }
+
+        let player: Result<u8, _> =
+            coords[0].parse();
+        let index: Result<u8, _> =
+            coords[1].parse();
+
+        if let (Ok(player), Ok(index)) = (player, index) {
+            Ok(Self { player, index })
+        } else {
+            Err(())
+        }
+    }
+}
+
+impl Display for CardPosition {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}.{}", self.player, self.index)
+    }
 }
