@@ -37,6 +37,25 @@ impl Card {
             Card::Joker => 0,
         }
     }
+
+    /// Pick the known card out of [a] and [b].
+    ///
+    /// If exactly one of [a] and [b] is [Some], that one is returned as [Ok].
+    ///
+    /// If either both or none of [a] and [b] are [Some], [Err] is returned.
+    pub fn pick_known(a: Option<Card>, b: Option<Card>) -> Result<Card, ()> {
+       if let Some(a) = a
+            && b == None
+        {
+            Ok(a)
+        } else if a == None
+            && let Some(b) = b
+        {
+            Ok(b)
+        } else {
+            Err(())
+        }
+    }
 }
 
 /// Either [Card] or [Option<Card>], depending on whether the context is a [DeterminizedGame] or

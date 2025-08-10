@@ -65,7 +65,8 @@ pub enum Action {
     /// Peek at a card.
     Peek(CardPosition),
 
-    /// Stick a card without giving away a card, i.e. sticking one's own card.
+    /// Stick a card without giving away a card, i.e. sticking one's own card. This can also be used
+    /// when you stick someone else's card and don't want to give away a card.
     StickWithoutGiveAway(CardPosition),
 
     /// Give away a card after sticking someone else's card, i.e. sticking someone else's card.

@@ -100,11 +100,8 @@ impl<T: UnderlyingCardType + Copy> FastJaggedVec<T> {
         let moved_card = self[original_position];
         self.remove_at(original_position);
         self.add_to_player(player, moved_card);
-
-        return;
+        
         // TODO Better implementation that doesn't go back and forth with index shifting
-        let original_index = self.raw_index(original_position);
-        let new_index = todo!();
     }
 
     /// Obtains the raw index in [player_indices] that corresponds to the card referred to by
