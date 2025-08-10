@@ -22,10 +22,6 @@ pub fn search_from(
         MonteCarloNode::execute_playout(&root, game, rng);
     }
 
-    for (action, child) in root.borrow().children.borrow().iter() {
-        let child_borrowed = child.borrow();
-    }
-
     root.borrow()
         .children.borrow().iter()
         .map(|(&action, child)|

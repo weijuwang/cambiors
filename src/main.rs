@@ -12,7 +12,7 @@ use rand_xoshiro::Xoshiro256PlusPlus;
 
 fn main() {
     let mut rng = Xoshiro256PlusPlus::from_rng(&mut rand::rng());
-    let pig = cambio::PartialInfoGame::new(4, 0, true, cambio::Card::Three, cambio::Card::Three);
+    let pig = cambio::PartialInfoGame::new(2, 0, true, cambio::Card::Ten, cambio::Card::Ten);
 
     let n = 100_000;
 
