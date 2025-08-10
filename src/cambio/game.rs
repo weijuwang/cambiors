@@ -38,6 +38,36 @@ pub struct Game<UnderlyingCard: UnderlyingCardType> {
 }
 
 impl<UnderlyingCard: UnderlyingCardType + Copy> Game<UnderlyingCard> {
+    /// Getter for [turn].
+    pub fn turn(&self) -> Player {
+        self.turn
+    }
+    
+    /// Getter for [discard_pile].
+    pub fn discard_pile(&self) -> &[Card] {
+        &self.discard_pile
+    }
+    
+    /// Getter for [unseen_cards].
+    pub fn unseen_cards(&self) -> &[Card] {
+        &self.unseen_cards
+    }
+    
+    /// Getter for [player_cards].
+    pub fn player_cards(&self, player: Player) -> &[CardAndVisibility<UnderlyingCard>] {
+        &self.cards[player]
+    }
+    
+    /// Getter for [cambio_caller].
+    pub fn cambio_caller(&self) -> Option<Player> {
+        self.cambio_caller
+    }
+    
+    /// Getter for [already_stuck].
+    pub fn already_stuck(&self) -> bool {
+        self.already_stuck
+    }
+    
     /// Obtains the range of indices of a player's cards.
     ///
     /// ## Example
@@ -57,11 +87,6 @@ impl<UnderlyingCard: UnderlyingCardType + Copy> Game<UnderlyingCard> {
             } else {
                 self.turn + 1
             };
-    }
-
-    /// The current player to move.
-    pub fn turn(&self) -> Player {
-        self.turn
     }
 
     /// The player who previously moved.
