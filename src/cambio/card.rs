@@ -1,5 +1,4 @@
 use std::fmt::Display;
-use std::str::FromStr;
 use super::*;
 
 /// Card types that are considered unique within the game of Cambio.
@@ -58,12 +57,8 @@ impl Card {
             Err(())
         }
     }
-}
 
-impl FromStr for Card {
-    type Err = ();
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
+    pub fn from_str(s: &str) -> Result<Self, clap::Error> {
         match s {
             "a" | "1" => Ok(Card::Ace),
             "2" => Ok(Card::Two),
@@ -80,7 +75,7 @@ impl FromStr for Card {
             "b" | "bk" => Ok(Card::BlackKing),
             "r" | "rk" => Ok(Card::RedKing),
             "0" | "joker" => Ok(Card::Joker),
-            _ => Err(()),
+            _ => Err(clap::Error::raw(clap::error::ErrorKind::ValueValidation, "Expected card")),
         }
     }
 }
@@ -187,10 +182,17 @@ pub struct CardPosition {
     pub index: u8
 }
 
-impl FromStr for CardPosition {
-    type Err = ();
+impl CardPosition {
+    /// Initializes a [CardPosition] while getting rid of the boilerplate code to cast [player] and
+    /// [index] to the correct types.
+    pub fn new(player: usize, index: usize) -> Self {
+        Self {
+            player: player as u8,
+            index: index as u8
+        }
+    }
 
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
+    fn from_str(s: &str) -> Result<Self, ()> {
         let coords: Vec<&str> = s
             .split('.')
             .collect();

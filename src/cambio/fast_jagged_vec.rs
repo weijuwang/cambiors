@@ -35,10 +35,10 @@ impl<T: UnderlyingCardType + Copy> FastJaggedVec<T> {
                     .filter(|p| raw_index >= self.player_start_indices[*p])
                     .max()
                     .expect("Something's wrong");
-                (CardPosition {
-                    player: player as u8,
-                    index: (raw_index - self.player_start_indices[player]) as u8
-                }, card)
+                (
+                    CardPosition::new(player, raw_index - self.player_start_indices[player]),
+                    card
+                )
             })
             .collect()
     }
@@ -52,10 +52,7 @@ impl<T: UnderlyingCardType + Copy> FastJaggedVec<T> {
                     .filter(|p| raw_index >= self.player_start_indices[*p])
                     .max()
                     .expect("Something's wrong");
-                CardPosition {
-                    player: player as u8,
-                    index: (raw_index - self.player_start_indices[player]) as u8
-                }
+                CardPosition::new(player, raw_index - self.player_start_indices[player])
             })
             .collect()
     }

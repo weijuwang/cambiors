@@ -5,6 +5,8 @@ use std::iter;
 use std::ops::*;
 use std::cmp::Ordering;
 
+// TODO Custom error type
+
 /// A Cambio game. The only two implemented variants are [DeterminizedGame] and [PartialInfoGame],
 /// which are both typealiases. See documentation there for more information.
 pub struct Game<UnderlyingCard: UnderlyingCardType> {
@@ -475,10 +477,7 @@ impl DeterminizedGame {
                                         .map(|index|
                                             Action::StickWithGiveAway {
                                                 stick_position: position,
-                                                give_away_position: CardPosition {
-                                                    player: player as u8,
-                                                    index: index as u8
-                                                }
+                                                give_away_position: CardPosition::new(player, index),
                                             }
                                         ));
                                 }
@@ -512,7 +511,7 @@ impl DeterminizedGame {
                     // Find indices of own cards
                     self.player_card_indices(self.turn)
                         .map(|index|
-                            Action::SwapDrawnCardForOwn(CardPosition { player: self.turn as u8, index: index as u8 })
+                            Action::SwapDrawnCardForOwn(CardPosition::new(self.turn, index))
                         )
                 );
                 actions.push(Action::Discard);
@@ -524,7 +523,7 @@ impl DeterminizedGame {
                     // Find indices of own cards
                     self.player_card_indices(self.turn)
                         .map(|index|
-                            Action::Peek(CardPosition { player: self.turn as u8, index: index as u8 })
+                            Action::Peek(CardPosition::new(self.turn, index))
                         )
                 );
 
@@ -587,7 +586,7 @@ impl DeterminizedGame {
                         Vec::from_iter(
                             self.player_card_indices(self.turn)
                                 .map(|index|
-                                    Action::BlindSwitch(position, CardPosition { player: self.turn as u8, index: index as u8 })
+                                    Action::BlindSwitch(position, CardPosition::new(self.turn, index))
                                 )
                         )
                     };
@@ -692,8 +691,8 @@ impl PartialInfoGame {
             state: State::BeginningOfTurn
         };
 
-        result[CardPosition { player: 0, index: 2 }] = CardAndVisibility::new_seen_by_one(Some(bottom_left), 0);
-        result[CardPosition { player: 0, index: 3 }] = CardAndVisibility::new_seen_by_one(Some(bottom_right), 0);
+        result[CardPosition::new(0, 2)] = CardAndVisibility::new_seen_by_one(Some(bottom_left), 0);
+        result[CardPosition::new(0, 3)] = CardAndVisibility::new_seen_by_one(Some(bottom_right), 0);
 
         result
     }
