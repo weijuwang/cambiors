@@ -42,32 +42,37 @@ impl<UnderlyingCard: UnderlyingCardType + Copy> Game<UnderlyingCard> {
     pub fn turn(&self) -> Player {
         self.turn
     }
-    
+
     /// Getter for [discard_pile].
     pub fn discard_pile(&self) -> &[Card] {
         &self.discard_pile
     }
-    
+
     /// Getter for [unseen_cards].
     pub fn unseen_cards(&self) -> &[Card] {
         &self.unseen_cards
     }
-    
+
     /// Getter for [player_cards].
     pub fn player_cards(&self, player: Player) -> &[CardAndVisibility<UnderlyingCard>] {
         &self.cards[player]
     }
-    
+
     /// Getter for [cambio_caller].
     pub fn cambio_caller(&self) -> Option<Player> {
         self.cambio_caller
     }
-    
+
     /// Getter for [already_stuck].
     pub fn already_stuck(&self) -> bool {
         self.already_stuck
     }
-    
+
+    // Getter for [state].
+    pub fn state(&self) -> State<UnderlyingCard> {
+        self.state
+    }
+
     /// Obtains the range of indices of a player's cards.
     ///
     /// ## Example
@@ -692,22 +697,22 @@ impl PartialInfoGame {
         result
     }
 
-    /// Removes a card from the draw pile. This is a formality asking the [PartialInfoGame] whether
-    /// it is possible that [card_drawn] can be removed from the draw deck in this state -- if so,
+    /// Removes a card from [unseen_cards]. This is a formality asking the [PartialInfoGame] whether
+    /// it is possible that [revealed_card] can be removed from the draw deck in this state -- if so,
     /// it removes it from [unseen_cards].
     ///
     /// This does not change [state] because drawing a card can happen as a result of a false stick,
     /// so it would be wrong to assume that the state should necessarily progress to [AfterDrawing].
-    fn pop_draw_pile(&mut self, card_drawn: Card) -> Option<Card> {
-        if !self.unseen_cards.contains(&card_drawn) {
+    fn remove_from_unseen(&mut self, revealed_card: Card) -> Result<Card, ()> {
+        if !self.unseen_cards.contains(&revealed_card) {
             // Drawing this card is impossible because we know it cannot be in the draw pile
-            return None
+            return Err(())
         }
 
         // Remove the first instance of [card_drawn]
         self.unseen_cards.remove(
             self.unseen_cards.iter()
-                .position(|&c| c == card_drawn)
+                .position(|&c| c == revealed_card)
                 .unwrap()
         );
 
@@ -724,7 +729,7 @@ impl PartialInfoGame {
             self.unseen_cards.append(&mut self.discard_pile);
         }
 
-        Some(card_drawn)
+        Ok(revealed_card)
     }
 
     /// If [action] is legal, it is executed, and [Ok] is returned; otherwise [Err] is returned and
@@ -735,6 +740,14 @@ impl PartialInfoGame {
         if let Some(new_state) = self.execute_if_common_behavior(action) {
             self.state = new_state;
             return Ok(());
+        }
+
+        // Revealed a card that cannot be in [unseen_cards]?
+        if let Some(revealed_card) = revealed_card
+            && self.remove_from_unseen(revealed_card)
+            .is_err()
+        {
+            return Err(());
         }
 
         self.state = match (&self.state, action) {
