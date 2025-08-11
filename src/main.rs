@@ -33,13 +33,13 @@ fn read_line(prompt: &str) -> String {
 
 /// Reads a [usize] from stdin. If the line doesn't read for some reason, it will keep trying until
 /// it is successful.
-fn read_usize(prompt: &str) -> usize {
+fn read<T: std::str::FromStr>(prompt: &str) -> T {
     loop {
         let raw_input = read_line(prompt);
-        if let Ok(result) = raw_input.trim().parse::<usize>() {
+        if let Ok(result) = raw_input.trim().parse::<T>() {
             break result
         } else {
-            println!("Please enter an integer!");
+            println!("Please enter the correct type!");
         }
     }
 }
@@ -52,13 +52,15 @@ fn log(message: &str) {
 fn main() {
     println!("{}", START_MESSAGE);
 
-    let num_players = read_usize("How many players?");
-    let first_player = read_usize("First player?");
+    let num_players = read("How many players?");
+    let first_player = read("First player?");
+    let bottom_left = read("Bottom left card?");
+    let bottom_right = read("Bottom right card?");
 
     let mut rng = cambio::CambioRng::from_rng(&mut rand::rng());
     log("Initialized RNG");
 
-    let mut game = cambio::PartialInfoGame::new(num_players, first_player, true, cambio::Card::Joker, cambio::Card::Ten);
+    let mut game = cambio::PartialInfoGame::new(num_players, first_player, true, bottom_left, bottom_right);
     log("Initialized partial-info game");
 
     let mut num_playouts = 100_000;
@@ -78,7 +80,7 @@ fn main() {
             println!("Last discarded was {}", last_discarded);
         }
         if let Some(cambio_caller) = game.cambio_caller() {
-            print!("Cambio called by {}", cambio_caller);
+            println!("Cambio called by {}", cambio_caller);
         }
         if game.already_stuck() {
             println!("Can't stick");
