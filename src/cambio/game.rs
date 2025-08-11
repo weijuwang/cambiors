@@ -128,6 +128,7 @@ impl<UnderlyingCard: UnderlyingCardType + Copy> Game<UnderlyingCard> {
     /// duplicated code.
     fn execute_if_common_behavior(&mut self, action: Action) -> Option<State<UnderlyingCard>> {
         match (self.state, action) {
+            // TODO False sticking in PartialInfoGame should lead to draw
             (_, Action::StickWithoutGiveAway(stick_position)) => {
                 // Execute the stick
                 self.already_stuck = true;
@@ -511,7 +512,7 @@ impl DeterminizedGame {
                     // Find indices of own cards
                     self.player_card_indices(self.turn)
                         .map(|index|
-                            Action::Swap(CardPosition { player: self.turn as u8, index: index as u8 })
+                            Action::SwapDrawnCardForOwn(CardPosition { player: self.turn as u8, index: index as u8 })
                         )
                 );
                 actions.push(Action::Discard);
@@ -630,7 +631,7 @@ impl DeterminizedGame {
                 Self::state_after_discarding(*card)
             }
 
-            (State::AfterDrawing(drawn_card), Action::Swap(position)
+            (State::AfterDrawing(drawn_card), Action::SwapDrawnCardForOwn(position)
             ) if !self.cards[self.turn].is_empty() => {
                 // Add the original card at [position] to the discard pile
                 self.discard_pile.push(
@@ -685,7 +686,7 @@ impl PartialInfoGame {
                 // Collect into Vec<Card>
                 .collect::<Vec<Card>>(),
 
-            cards: FastJaggedVec::new(num_players, bottom_left, bottom_right),
+            cards: FastJaggedVec::new(num_players),
             already_stuck: false,
             cambio_caller: None,
             state: State::BeginningOfTurn
@@ -716,7 +717,6 @@ impl PartialInfoGame {
                 .unwrap()
         );
 
-        // TODO This is an expensive way of finding whether the draw pile is empty. However, it is easier to code given Rust's restrictions on OOP, and we don't care about speed because it's not in [DeterminizedGame]. I would like to find a more elegant way to do this in the future.
         // Find the number of unseen cards among players' piles. If the total number of unseen cards
         // is equal to this then it means there are no cards in the draw pile and we need to reshuffle.
         let num_unseen_player_cards = self.cards
@@ -734,7 +734,7 @@ impl PartialInfoGame {
 
     /// If [action] is legal, it is executed, and [Ok] is returned; otherwise [Err] is returned and
     /// the game state is not mutated.
-    fn execute(&mut self, action: Action, revealed_card: Option<Card>) -> Result<(), ()> {
+    pub fn execute(&mut self, action: Action, revealed_card: Option<Card>) -> Result<(), ()> {
         // If this action is implemented for both [DeterminizedGame] and [PartialInfoGame], use that
         // code
         if let Some(new_state) = self.execute_if_common_behavior(action) {
@@ -764,7 +764,7 @@ impl PartialInfoGame {
                 }
             }
 
-            (State::AfterDrawing(drawn_card), Action::Swap(position)
+            (State::AfterDrawing(drawn_card), Action::SwapDrawnCardForOwn(position)
             ) if !self.cards[self.turn].is_empty() => {
                 // Try to find the original card at [position] or get it from [revealed_card]
                 match Card::pick_known(self.cards[position].value(), revealed_card) {
@@ -787,5 +787,10 @@ impl PartialInfoGame {
         };
 
         Ok(())
+    }
+
+    /// Calculates the size of the draw pile.
+    pub fn draw_pile_size(&self) -> usize {
+        self.unseen_cards.len() - self.cards.flatten().len()
     }
 }

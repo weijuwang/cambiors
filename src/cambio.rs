@@ -1,3 +1,4 @@
+use std::fmt::Display;
 use rand_xoshiro::Xoshiro256PlusPlus;
 use rand::prelude::*;
 
@@ -30,9 +31,9 @@ fn remove_random_from<T>(v: &mut Vec<T>, rng: &mut CambioRng) -> T {
 }
 
 /// The state of a [Game]. This tells us which moves are currently legal.
-#[derive(Copy, Clone, Debug)]
+#[derive(PartialEq, Eq, Copy, Clone, Debug)]
 #[repr(u8)]
-enum State<UnderlyingCard: UnderlyingCardType> {
+pub enum State<UnderlyingCard: UnderlyingCardType> {
     BeginningOfTurn,
     AfterDrawing(UnderlyingCard),
     AfterDiscard7Or8,
@@ -54,7 +55,7 @@ pub enum Action {
     Discard,
 
     /// Swap the card just drawn with a card in the player's own pile.
-    Swap(CardPosition),
+    SwapDrawnCardForOwn(CardPosition),
 
     /// Swap any two cards from different players.
     ///
@@ -82,4 +83,22 @@ pub enum Action {
 
     /// Pass the turn to the next player, prohibiting anyone from sticking.
     EndTurn
+}
+
+impl Display for Action {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Action::Draw => write!(f, "Draw"),
+            Action::Discard => write!(f, "Discard"),
+            Action::SwapDrawnCardForOwn(pos) => write!(f, "Swap for {}", pos),
+            Action::BlindSwitch(a, b) => write!(f, "Switch {} and {}", a, b),
+            Action::Peek(pos) => write!(f, "Peek {}", pos),
+            Action::StickWithoutGiveAway(pos) => write!(f, "Stick {}", pos),
+            Action::StickWithGiveAway { stick_position, give_away_position } =>
+                write!(f, "Stick {}, give away {}", stick_position, give_away_position),
+            Action::CallCambio => write!(f, "Call Cambio"),
+            Action::SkipOptional => write!(f, "Skip"),
+            Action::EndTurn => write!(f, "End turn"),
+        }
+    }
 }

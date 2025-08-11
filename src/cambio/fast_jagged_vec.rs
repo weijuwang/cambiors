@@ -123,28 +123,19 @@ impl FastJaggedVec<Card> {
 }
 
 impl FastJaggedVec<Option<Card>> {
-    /// Constructs a new [FastJaggedVec] representing what player 0 knows about the cards at the
-    /// beginning of the game. [bottom_left] and [bottom_right] are the cards that player 0 gets to
+    /// Constructs a new [FastJaggedVec] representing with no information about the cards at
+    /// the beginning of the game. [bottom_left] and [bottom_right] are the cards that player 0 gets to
     /// see at the beginning of the game.
-    pub fn new(num_players: usize, bottom_left: Card, bottom_right: Card) -> Self {
+    pub fn new(num_players: usize) -> Self {
         Self {
             cards: (0..num_players)
                 .flat_map(|player|
-                    if player == 0 {
-                        vec![
-                            CardAndVisibility::new_seen_by_nobody(None),
-                            CardAndVisibility::new_seen_by_nobody(None),
-                            CardAndVisibility::new_seen_by_one(Some(bottom_left), player),
-                            CardAndVisibility::new_seen_by_one(Some(bottom_right), player),
-                        ]
-                    } else {
-                        vec![
-                            CardAndVisibility::new_seen_by_nobody(None),
-                            CardAndVisibility::new_seen_by_nobody(None),
-                            CardAndVisibility::new_seen_by_one(None, player),
-                            CardAndVisibility::new_seen_by_one(None, player),
-                        ]
-                    }
+                    vec![
+                        CardAndVisibility::new_seen_by_nobody(None),
+                        CardAndVisibility::new_seen_by_nobody(None),
+                        CardAndVisibility::new_seen_by_one(None, player),
+                        CardAndVisibility::new_seen_by_one(None, player),
+                    ]
                 )
                 .collect(),
             player_start_indices: (0..=num_players)
