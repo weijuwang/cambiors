@@ -66,14 +66,12 @@ pub enum Action {
     /// Peek at a card.
     Peek(CardPosition),
 
-    /// Stick a card without giving away a card, i.e. sticking one's own card. This can also be used
-    /// when you stick someone else's card and don't want to give away a card.
-    StickWithoutGiveAway(CardPosition),
-
-    /// Give away a card after sticking someone else's card, i.e. sticking someone else's card.
-    ///
-    /// The player sticking and giving away the card is the same.
-    StickWithGiveAway { stick_position: CardPosition, give_away_position: CardPosition },
+    /// Stick a card.
+    Stick {
+        stick_player: Player,
+        stick_position: CardPosition,
+        give_away_position: Option<CardPosition>
+    },
 
     /// Call "Cambio," beginning the endgame.
     CallCambio,
@@ -88,17 +86,30 @@ pub enum Action {
 impl Display for Action {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Action::Draw => write!(f, "Draw"),
-            Action::Discard => write!(f, "Discard"),
-            Action::SwapDrawnCardForOwn(pos) => write!(f, "Swap for {}", pos),
-            Action::BlindSwitch(a, b) => write!(f, "Switch {} and {}", a, b),
-            Action::Peek(pos) => write!(f, "Peek {}", pos),
-            Action::StickWithoutGiveAway(pos) => write!(f, "Stick {}", pos),
-            Action::StickWithGiveAway { stick_position, give_away_position } =>
-                write!(f, "Stick {}, give away {}", stick_position, give_away_position),
-            Action::CallCambio => write!(f, "Call Cambio"),
-            Action::SkipOptional => write!(f, "Skip"),
-            Action::EndTurn => write!(f, "End turn"),
+            Action::Draw =>
+                write!(f, "Draw"),
+            Action::Discard =>
+                write!(f, "Discard"),
+            Action::SwapDrawnCardForOwn(pos) =>
+                write!(f, "Swap for {pos}"),
+            Action::BlindSwitch(a, b) =>
+                write!(f, "Switch {a} and {b}"),
+            Action::Peek(pos) =>
+                write!(f, "Peek {pos}"),
+            Action::Stick { stick_player, stick_position, give_away_position } =>
+                write!(f, "Stick  {stick_position} by {stick_player}{}",
+                    if let Some(give_away_position) = give_away_position {
+                        format!(", give-away {give_away_position}")
+                    } else {
+                        String::new()
+                    }
+                ),
+            Action::CallCambio =>
+                write!(f, "Call Cambio"),
+            Action::SkipOptional =>
+                write!(f, "Skip"),
+            Action::EndTurn =>
+                write!(f, "End turn"),
         }
     }
 }

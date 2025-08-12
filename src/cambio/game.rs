@@ -5,7 +5,8 @@ use std::iter;
 use std::ops::*;
 use std::cmp::Ordering;
 
-// TODO Custom error type
+// TODO Custom error type + PartialInfoGame should catch errors and pass them on if relevant + Display errors
+
 
 /// A Cambio game. The only two implemented variants are [DeterminizedGame] and [PartialInfoGame],
 /// which are both typealiases. See documentation there for more information.
@@ -131,14 +132,15 @@ impl<UnderlyingCard: UnderlyingCardType + Copy> Game<UnderlyingCard> {
     fn execute_if_common_behavior(&mut self, action: Action) -> Option<State<UnderlyingCard>> {
         match (self.state, action) {
             // TODO False sticking in PartialInfoGame should lead to draw
-            (_, Action::StickWithoutGiveAway(stick_position)) => {
-                // Execute the stick
+            (_, Action::Stick { stick_player: _, stick_position, give_away_position }) => {
+                /* Execute the stick */
                 self.already_stuck = true;
                 self.cards.remove_at(stick_position);
-                self.discard_pile.push(
-                    *self.discard_pile.last()
-                        .expect("Cannot stick without something on the discard pile")
-                );
+                if let Some(&discard_pile_top) = self.discard_pile.last() {
+                    self.discard_pile.push(discard_pile_top);
+                } else {
+                    return None;
+                }
 
                 // If a card was peeked previously in preparation for a black king swap, we may need to
                 // adjust the index of that card so it still points to the same card
@@ -160,38 +162,6 @@ impl<UnderlyingCard: UnderlyingCardType + Copy> Game<UnderlyingCard> {
                 TODO Is there seriously not a better way to do this? Maybe immut reference to card instead
                 of card positions? I'm basically managing pointers manually which is not very safe
                  */
-                Some(if let State::AfterBlackKingPeeked(peeked_position) = self.state
-                    // If the peeked card and the stuck card belong to the same player
-                    && peeked_position.player == stick_position.player {
-                    match peeked_position.index.cmp(&stick_position.index) {
-                        Ordering::Less =>
-                            self.state,
-                        // ~~~ SCENARIO B ~~~
-                        // `stick_position == peeked_position`
-                        // The card that got peeked at got stuck
-                        // Let the player peek another one
-                        Ordering::Equal =>
-                            State::AfterDiscardBlackKing,
-                        // ~~~ SCENARIO A ~~~
-                        // [peeked_position] points to something different from what it did originally
-                        // because everything got shifted over
-                        Ordering::Greater =>
-                            State::AfterBlackKingPeeked(CardPosition {
-                                player: peeked_position.player, index: peeked_position.index - 1
-                            })
-                    }
-                } else { self.state })
-            }
-
-            (_, Action::StickWithGiveAway { stick_position, give_away_position }) => {
-                // Execute the stick
-                self.already_stuck = true;
-                self.cards.remove_at(stick_position);
-                self.discard_pile.push(
-                    *self.discard_pile.last()
-                        .expect("Cannot stick without something on the discard pile")
-                );
-
                 // If a card was peeked previously in preparation for a black king swap, we may need to
                 // adjust the index of that card so it still points to the same card
                 let new_state = if let State::AfterBlackKingPeeked(peeked_position) = self.state {
@@ -215,7 +185,9 @@ impl<UnderlyingCard: UnderlyingCardType + Copy> Game<UnderlyingCard> {
                                     index: peeked_position.index - 1
                                 })
                         }
-                    } else if peeked_position.player == give_away_position.player {
+                    } else if let Some(give_away_position) = give_away_position
+                        && peeked_position.player == give_away_position.player
+                    {
                         // If the peeked card and the give-away card belong to the same player
                         match peeked_position.index.cmp(&stick_position.index) {
                             Ordering::Less =>
@@ -245,9 +217,11 @@ impl<UnderlyingCard: UnderlyingCardType + Copy> Game<UnderlyingCard> {
                     } else { self.state }
                 } else { self.state };
 
-                // Execute giveaway
-                self.cards
-                    .move_card_to_player(give_away_position, stick_position.player as Player);
+                /* Execute giveaway */
+                if let Some(give_away_position) = give_away_position {
+                    self.cards
+                        .move_card_to_player(give_away_position, stick_position.player as Player);
+                }
 
                 Some(new_state)
             }
@@ -458,26 +432,29 @@ impl DeterminizedGame {
         actions.extend(self.cards.enumerate()
             .into_iter()
             // Filter to valid sticks only
-            .filter_map(|(position, card)|
-                if card.value() == card_to_match
+            .filter_map(|(stick_position, card)|
+                if card.value == card_to_match
                     // Cambio caller cannot be affected by sticks
-                    && self.cambio_caller != Some(position.player as Player)
+                    && self.cambio_caller != Some(stick_position.player as Player)
                 {
                     Some(
                         // Find all players who can see this card and let them stick it
                         (0..self.num_players())
-                            .filter(|player| card.seen_by(*player))
-                            .flat_map(move |player| {
+                            .filter(|stick_player| card.seen_by(*stick_player))
+                            .flat_map(move |stick_player| {
                                 // You don't have to give away one of your cards even if it's
                                 // another player's card that you stuck
-                                let mut actions = vec![Action::StickWithoutGiveAway(position)];
+                                let mut actions = vec![Action::Stick {
+                                    stick_player, stick_position, give_away_position: None
+                                }];
                                 // Stick another player's card
-                                if player != position.player as usize {
-                                    actions.extend(self.player_card_indices(player)
+                                if stick_player != stick_position.player as usize {
+                                    actions.extend(self.player_card_indices(stick_player)
                                         .map(|index|
-                                            Action::StickWithGiveAway {
-                                                stick_position: position,
-                                                give_away_position: CardPosition::new(player, index),
+                                            Action::Stick {
+                                                stick_player,
+                                                stick_position,
+                                                give_away_position: Some(CardPosition::new(stick_player, index)),
                                             }
                                         ));
                                 }
@@ -634,7 +611,7 @@ impl DeterminizedGame {
             ) if !self.cards[self.turn].is_empty() => {
                 // Add the original card at [position] to the discard pile
                 self.discard_pile.push(
-                    self.cards[position].value()
+                    self.cards[position].value
                 );
                 // Replace the card at [position] and indicate it's been seen by this player
                 self.cards[position] =
@@ -721,7 +698,7 @@ impl PartialInfoGame {
         let num_unseen_player_cards = self.cards
             .flatten()
             .iter()
-            .filter(|exposed_card| exposed_card.value().is_none())
+            .filter(|exposed_card| exposed_card.value.is_none())
             .count();
 
         if self.unseen_cards.len() <= num_unseen_player_cards {
@@ -738,6 +715,12 @@ impl PartialInfoGame {
         // code
         if let Some(new_state) = self.execute_if_common_behavior(action) {
             self.state = new_state;
+            if let Action::Peek(position) = action
+                && revealed_card.is_some()
+            {
+                self.cards[position].value = revealed_card;
+            }
+            // TODO Verify legal stick
             return Ok(());
         }
 
@@ -766,7 +749,7 @@ impl PartialInfoGame {
             (State::AfterDrawing(drawn_card), Action::SwapDrawnCardForOwn(position)
             ) if !self.cards[self.turn].is_empty() => {
                 // Try to find the original card at [position] or get it from [revealed_card]
-                match Card::pick_known(self.cards[position].value(), revealed_card) {
+                match Card::pick_known(self.cards[position].value, revealed_card) {
                     Ok(known_replaced_card) => {
                         // Add the original card at [position] to the discard pile
                         self.discard_pile.push(known_replaced_card);

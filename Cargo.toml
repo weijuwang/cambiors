@@ -6,3 +6,5 @@ edition = "2024"
 [dependencies]
 rand_xoshiro = "0.7.0"
 rand = "0.9.2"
+reedline-repl-rs = "1.2.1"
+clap = { version = "4.5.43", features = ["derive"] }

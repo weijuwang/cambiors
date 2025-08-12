@@ -13,29 +13,72 @@ pub fn search_from(
     game: &cambio::PartialInfoGame,
     num_playouts: usize,
     rng: &mut cambio::CambioRng
-) -> HashMap<cambio::Action, f32> {
+) -> SearchResults {
     let root = Rc::new(RefCell::new(
-        MonteCarloNode::new(game, None, Weak::new())
+        Node::new(game, None, Weak::new())
     ));
 
     for _ in 0..num_playouts {
-        MonteCarloNode::execute_playout(&root, game, rng);
+        Node::execute_playout(&root, game, rng);
     }
 
-    root.borrow()
+    let root_winrate = root.borrow().winrate();
+
+    let actions: Vec<_> = root.borrow()
         .children.borrow().iter()
         .map(|(&action, child)|
             (action, child.borrow().winrate())
         )
-        .collect()
+        .collect();
+
+    let mut non_stick_actions: Vec<_> = actions
+        .iter().filter_map(|(action, winrate)|
+            if let cambio::Action::Stick { .. } = action {
+                None
+            } else {
+                Some((*action, *winrate))
+            }
+        )
+        .collect();
+
+    let mut sticks: Vec<_> = actions
+        .iter().filter_map(|(action, winrate)|
+            if let cambio::Action::Stick { .. } = action {
+                Some((*action, *winrate))
+            } else {
+                None
+            }
+        )
+        .collect();
+
+    non_stick_actions.sort_by(|(_, a), (_, b)|
+        f32::partial_cmp(b, a).unwrap()
+    );
+    sticks.sort_by(|(_, a), (_, b)|
+        f32::partial_cmp(b, a).unwrap()
+    );
+
+    SearchResults {  root_winrate, non_stick_actions, sticks }
+}
+
+///
+pub struct SearchResults {
+    ///
+    pub root_winrate: f32,
+
+    ///
+    pub non_stick_actions: Vec<(cambio::Action, f32)>,
+
+    ///
+    pub sticks: Vec<(cambio::Action, f32)>,
 }
 
 /// A node of a Monte Carlo tree.
 ///
-/// This should always be wrapped in [Rc] as [Rc<MonteCarloNode>] because each node will have at
+/// This should always be wrapped in [Rc] as [Rc<Node>] because each node will have at
 /// least one strong reference by its parent and weak references by its children.
 #[derive(Debug)]
-struct MonteCarloNode {
+struct Node {
     /// The number of wins that [player] has earned from this position.
     wins: f32,
 
@@ -50,7 +93,7 @@ struct MonteCarloNode {
 
     /// Child nodes.
     ///
-    /// This needs to be wrapped in a [RefCell] because all [MonteCarloNode]s are wrapped in [Rc]
+    /// This needs to be wrapped in a [RefCell] because all [Node]s are wrapped in [Rc]
     /// which only lets us borrow a node immutably; this would be unworkable when we need to add a
     /// child.
     children: RefCell<
@@ -61,13 +104,13 @@ struct MonteCarloNode {
     parent: Weak<RefCell<Self>>
 }
 
-impl MonteCarloNode {
+impl Node {
     /// The winrate for [player] from this node.
     pub fn winrate(&self) -> f32 {
         self.wins / self.playouts
     }
 
-    /// Constructs a new [MonteCarloNode] wrapped in [Rc].
+    /// Constructs a new [Node] wrapped in [Rc].
     ///
     /// [previous_action] is necessary to determine the [player] field. Normally, this is the player
     /// to move, but if the previous move was a stick, it should be the player who stuck the card;
@@ -81,18 +124,12 @@ impl MonteCarloNode {
             wins: 0.,
             playouts: 0.,
             player: match previous_action {
-                Some(
-                    cambio::Action::StickWithoutGiveAway(
-                         cambio::CardPosition { player, index: _ }
-                    )
-                    | cambio::Action::StickWithGiveAway {
-                        give_away_position: cambio::CardPosition { player, index: _ },
-                        ..
-                    }
-                ) => player as cambio::Player,
+                Some(cambio::Action::Stick { stick_player, .. }) =>
+                    stick_player as cambio::Player,
                 Some(cambio::Action::CallCambio) =>
                     game.prev_turn(),
-                _ => game.turn()
+                _ =>
+                    game.turn()
             },
             children: RefCell::new(HashMap::new()),
             parent
@@ -153,7 +190,7 @@ impl MonteCarloNode {
             game.execute(unexpanded_action, rng);
 
             // Create a new child node to represent it
-            let expanded_node = MonteCarloNode::new(
+            let expanded_node = Node::new(
                 game,
                 Some(unexpanded_action),
                 Rc::downgrade(node)
@@ -214,7 +251,7 @@ impl MonteCarloNode {
             game.execute(action, rng);
 
             // Expand the child
-            MonteCarloNode::select_and_expand(child, game, rng)
+            Node::select_and_expand(child, game, rng)
         }
     }
 

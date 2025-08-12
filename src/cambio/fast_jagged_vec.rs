@@ -74,7 +74,7 @@ impl<T: UnderlyingCardType + Copy> FastJaggedVec<T> {
             self.player_start_indices[player] -= 1;
         }
 
-        removed_card.value()
+        removed_card.value
     }
 
     /// Give a player one card.
@@ -112,7 +112,7 @@ impl FastJaggedVec<Card> {
                 let start_index = self.player_start_indices[player];
                 let end_index = self.player_start_indices[player + 1];
                 self.cards[start_index..end_index].iter()
-                    .map(|card| card.value().points())
+                    .map(|card| card.value.points())
                     .sum()
             })
             .collect()

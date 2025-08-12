@@ -1,4 +1,5 @@
 use std::fmt::Display;
+use std::str::FromStr;
 use super::*;
 
 /// Card types that are considered unique within the game of Cambio.
@@ -57,27 +58,6 @@ impl Card {
             Err(())
         }
     }
-
-    pub fn from_str(s: &str) -> Result<Self, clap::Error> {
-        match s {
-            "a" | "1" => Ok(Card::Ace),
-            "2" => Ok(Card::Two),
-            "3" => Ok(Card::Three),
-            "4" => Ok(Card::Four),
-            "5" => Ok(Card::Five),
-            "6" => Ok(Card::Six),
-            "7" => Ok(Card::Seven),
-            "8" => Ok(Card::Eight),
-            "9" => Ok(Card::Nine),
-            "x" | "10" => Ok(Card::Ten),
-            "j" => Ok(Card::Jack),
-            "q" => Ok(Card::Queen),
-            "b" | "bk" => Ok(Card::BlackKing),
-            "r" | "rk" => Ok(Card::RedKing),
-            "0" | "joker" => Ok(Card::Joker),
-            _ => Err(clap::Error::raw(clap::error::ErrorKind::ValueValidation, "Expected card")),
-        }
-    }
 }
 
 impl Display for Card {
@@ -103,6 +83,31 @@ impl Display for Card {
     }
 }
 
+impl FromStr for Card {
+    type Err = clap::Error;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.trim().to_uppercase().as_str() {
+            "A" | "1" => Ok(Card::Ace),
+            "2" => Ok(Card::Two),
+            "3" => Ok(Card::Three),
+            "4" => Ok(Card::Four),
+            "5" => Ok(Card::Five),
+            "6" => Ok(Card::Six),
+            "7" => Ok(Card::Seven),
+            "8" => Ok(Card::Eight),
+            "9" => Ok(Card::Nine),
+            "X" | "10" => Ok(Card::Ten),
+            "J" => Ok(Card::Jack),
+            "Q" => Ok(Card::Queen),
+            "B" | "BK" => Ok(Card::BlackKing),
+            "R" | "RK" | "-1" => Ok(Card::RedKing),
+            "0" | "JOKER" => Ok(Card::Joker),
+            _ => Err(clap::Error::raw(clap::error::ErrorKind::ValueValidation, "Not a card type")),
+        }
+    }
+}
+
 /// Either [Card] or [Option<Card>], depending on whether the context is a [DeterminizedGame] or
 /// [PartialInfoGame].
 pub trait UnderlyingCardType {}
@@ -113,17 +118,13 @@ impl UnderlyingCardType for Option<Card> {}
 #[derive(Copy, Clone)]
 pub struct CardAndVisibility<UnderlyingCard: UnderlyingCardType> {
     /// The actual card represented by this struct.
-    value: UnderlyingCard,
+    pub value: UnderlyingCard,
 
     /// Bitflags whose indices signify players who have seen this card.
     seen_by_players: u32,
 }
 
 impl<UnderlyingCard: UnderlyingCardType + Copy> CardAndVisibility<UnderlyingCard> {
-    pub fn value(&self) -> UnderlyingCard {
-        self.value
-    }
-
     /// Create a new card that has been seen by no players.
     pub fn new_seen_by_nobody(value: UnderlyingCard) -> Self {
         Self {
@@ -191,14 +192,24 @@ impl CardPosition {
             index: index as u8
         }
     }
+}
 
-    fn from_str(s: &str) -> Result<Self, ()> {
+impl Display for CardPosition {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "P{} #{}", self.player, self.index)
+    }
+}
+
+impl FromStr for CardPosition {
+    type Err = clap::Error;
+    
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
         let coords: Vec<&str> = s
             .split('.')
             .collect();
 
         if coords.len() != 2 {
-            return Err(());
+            return Err(clap::Error::raw(clap::error::ErrorKind::ValueValidation, "Too many numbers in card position"));
         }
 
         let player: Result<u8, _> =
@@ -209,13 +220,7 @@ impl CardPosition {
         if let (Ok(player), Ok(index)) = (player, index) {
             Ok(Self { player, index })
         } else {
-            Err(())
+            Err(clap::Error::raw(clap::error::ErrorKind::ValueValidation, "Not a card position"))
         }
-    }
-}
-
-impl Display for CardPosition {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}.{}", self.player, self.index)
     }
 }
