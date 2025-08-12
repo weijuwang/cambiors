@@ -16,7 +16,7 @@ const PROGRAM_NAME: &str = env!("CARGO_PKG_NAME");
 const DESCRIPTION: &str = "Command-line interface for a partial-information Cambio card game API and Monte Carlo tree search.";
 
 /// The banner that is displayed at start-up.
-const BANNER: &str = "Welcome to cambiors! Last updated 11 Aug 2025.";
+const BANNER: &str = "Welcome to cambiors! Last updated 12 Aug 2025.";
 
 /// The message that is displayed when the user attempts to execute an illegal action.
 const ILLEGAL_ACTION_MESSAGE: &str = "Can't execute this action";
@@ -113,7 +113,7 @@ fn game_as_string(context: &Context) -> String {
 fn game_cards(context: &Context) -> String {
     (0..context.game.num_players())
         .map(|player|
-            player.to_string() + " " +
+            paint_yellow_bold(&player.to_string()) + " " +
                 &*context.game.player_cards(player)
                     .iter()
                     .map(|card|
@@ -154,8 +154,8 @@ fn main() -> Result<()> {
                 && context.game.execute(action, card).is_err()
             {
                 println!("{}", ILLEGAL_ACTION_MESSAGE);
-                context.next_action = None;
             }
+            context.next_action = None;
             Ok(Some(game_as_string(context)))
         })
 
@@ -201,12 +201,21 @@ fn main() -> Result<()> {
                 let search_results = mcts::search_from(&context.game, context.num_playouts, &mut context.rng);
                 let micros = start.elapsed().as_micros() as f32;
 
-                println!("Search results ({} playouts, {} us/playout)", context.num_playouts, micros / context.num_playouts as f32);
-                println!("  Current: {}%", (search_results.root_winrate * 100.).round());
+                println!(
+                    "{} ({} playouts, {} us/playout)",
+                    paint_yellow_bold("Search results"),
+                    context.num_playouts,
+                    micros / context.num_playouts as f32
+                );
+                println!(
+                    "  {}: {}%",
+                    paint_yellow_bold("From root"),
+                    (search_results.root_winrate * 100.).round()
+                );
                 for (action, winrate) in search_results.non_stick_actions {
                     println!("    {action}: {}%", (winrate * 100.).round());
                 }
-                println!("  Sticks");
+                println!("  {}", paint_yellow_bold("Sticks"));
                 for (action, winrate) in search_results.sticks {
                     println!("    {action}: {}%", (winrate * 100.).round());
                 }
