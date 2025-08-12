@@ -37,7 +37,7 @@ pub struct Game<UnderlyingCard: UnderlyingCardType> {
     already_stuck: bool,
 
     /// The number of cards in circulation.
-    deck_size: usize,
+    draw_deck_size: usize,
 
     /// The current state of the game.
     state: State<UnderlyingCard>
@@ -342,7 +342,7 @@ impl DeterminizedGame {
 
             already_stuck: partial_info.already_stuck,
 
-            deck_size: partial_info.deck_size,
+            draw_deck_size: partial_info.draw_deck_size,
 
             state: match partial_info.state {
                 State::AfterDrawing(None) =>
@@ -404,15 +404,15 @@ impl DeterminizedGame {
     ///
     /// This does not change [state] because drawing a card can happen as a result of a false stick,
     /// so it would be wrong to assume that the state should necessarily progress to [AfterDrawing].
-    fn draw_random_card(&mut self, rng: &mut CambioRng) -> Card {
+    fn draw_from_unseen(&mut self, rng: &mut CambioRng) -> Card {
         let drawn_card = remove_random_from(&mut self.unseen_cards, rng);
 
-        if self.unseen_cards.is_empty() {
+        if self.draw_deck_size == 0 {
             self.unseen_cards.append(&mut self.discard_pile);
 
             // Still empty, meaning discard pile had nothing and the game is effectively over
             // because no draws can happen
-
+            // TODO Loophole here
         }
 
         drawn_card
@@ -612,16 +612,18 @@ impl DeterminizedGame {
         }
 
         self.state = match (&self.state, action) {
-            (State::BeginningOfTurn, Action::Draw) =>
-                State::AfterDrawing(self.draw_random_card(rng)),
+            (State::BeginningOfTurn, Action::Draw) => {
+                self.draw_deck_size -= 1;
+                State::AfterDrawing(self.draw_from_unseen(rng))
+            }
 
             (State::AfterDrawing(card), Action::Discard) => {
                 self.discard_pile.push(*card);
                 Self::state_after_discarding(*card)
             }
 
-            (State::AfterDrawing(drawn_card), Action::SwapDrawnCardForOwn(position)
-            ) if !self.cards[self.turn].is_empty() => {
+            (State::AfterDrawing(drawn_card), Action::SwapDrawnCardForOwn(position))
+            if !self.cards[self.turn].is_empty() => {
                 // Add the original card at [position] to the discard pile
                 self.discard_pile.push(
                     self.cards[position].value
@@ -671,7 +673,7 @@ impl PartialInfoGame {
             )
             // Collect into Vec<Card>
             .collect();
-        let deck_size = deck.len();
+        let draw_deck_size = deck.len();
 
         let mut result = Self {
             turn: first_player,
@@ -680,7 +682,7 @@ impl PartialInfoGame {
             cards: FastJaggedVec::new(num_players),
             already_stuck: false,
             cambio_caller: None,
-            deck_size,
+            draw_deck_size,
             state: State::BeginningOfTurn
         };
 
@@ -749,8 +751,10 @@ impl PartialInfoGame {
         }
 
         self.state = match (&self.state, action) {
-            (State::BeginningOfTurn, Action::Draw) =>
-                State::AfterDrawing(revealed_card),
+            (State::BeginningOfTurn, Action::Draw) => {
+                self.draw_deck_size -= 1;
+                State::AfterDrawing(revealed_card)
+            }
 
             (State::AfterDrawing(drawn_card), Action::Discard) => {
                 match Card::pick_known(*drawn_card, revealed_card) {
@@ -788,7 +792,7 @@ impl PartialInfoGame {
     }
 
     /// Calculates the size of the draw pile.
-    pub fn draw_pile_size(&self) -> usize {
-        self.deck_size - self.discard_pile.len() - self.cards.flatten().len()
+    pub fn draw_deck_size(&self) -> usize {
+        self.draw_deck_size
     }
 }

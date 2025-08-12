@@ -64,6 +64,12 @@ struct Context {
 
     /// The action that will be executed on [game] before prompting for the next command.
     next_action: Option<(cambio::Action, Option<cambio::Card>)>,
+
+    /// The player who had the turn at the beginning of the game.
+    first_player: cambio::Player,
+
+    /// The list of actions that have been executed in this session.
+    action_history: Vec<cambio::Action>
 }
 
 fn game_as_string(context: &Context) -> String {
@@ -71,7 +77,7 @@ fn game_as_string(context: &Context) -> String {
         "Turn {}/{}  {} to draw  {} discarded",
         context.game.turn(),
         context.game.num_players(),
-        context.game.draw_pile_size(),
+        context.game.draw_deck_size(),
         context.game.discard_pile().len()
     );
 
@@ -142,7 +148,9 @@ fn main() -> Result<()> {
             cmd_args.bottom_right_card
         ),
         num_playouts: DEFAULT_PLAYOUTS,
-        next_action: None
+        next_action: None,
+        first_player: cmd_args.first_player,
+        action_history: vec![]
     };
 
     Repl::<_, reedline_repl_rs::Error>::new(context)
@@ -151,9 +159,15 @@ fn main() -> Result<()> {
         .with_banner(BANNER)
         .with_on_after_command(|context| {
             if let Some((action, card)) = context.next_action
-                && context.game.execute(action, card).is_err()
             {
-                println!("{}", ILLEGAL_ACTION_MESSAGE);
+                match context.game.execute(action, card) {
+                    Ok(()) => {
+                        context.action_history.push(action);
+                    }
+                    Err(()) => {
+                        println!("  {}", ILLEGAL_ACTION_MESSAGE);
+                    }
+                }
             }
             context.next_action = None;
             Ok(Some(game_as_string(context)))
@@ -218,6 +232,40 @@ fn main() -> Result<()> {
                 println!("  {}", paint_yellow_bold("Sticks"));
                 for (action, winrate) in search_results.sticks {
                     println!("    {action}: {}%", (winrate * 100.).round());
+                }
+                Ok(None)
+            }
+        )
+
+        .with_command(
+            Command::new("history")
+                .about("Displays the list of actions that have been executed so far."),
+            |_, context| {
+                let mut player = context.first_player;
+                let mut new_player = true;
+
+                for action in context.action_history.iter() {
+                    if new_player {
+                        player += 1;
+                        println!("{}", paint_yellow_bold(&format!("{}", player % context.game.num_players())));
+                        new_player = false;
+                    }
+
+                    match action {
+                        cambio::Action::EndTurn => {
+                            new_player = true;
+                        }
+                        cambio::Action::CallCambio => {
+                            println!("  {}", paint_yellow_bold("Call Cambio"));
+                            new_player = true;
+                        }
+                        cambio::Action::Stick { .. } => {
+                            println!("  {}", paint_yellow_bold(&format!("{}", action)));
+                        }
+                        _ => {
+                            println!("  {}", action);
+                        }
+                    }
                 }
                 Ok(None)
             }
