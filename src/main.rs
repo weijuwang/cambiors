@@ -225,7 +225,7 @@ fn main() -> Result<()> {
 
         .with_command(
             Command::new("draw")
-                .about("Draw a card.")
+                .about("Draws a card.")
                 .arg(
                     Arg::new("drawn-card")
                         .required(false)
@@ -242,7 +242,7 @@ fn main() -> Result<()> {
 
         .with_command(
             Command::new("discard")
-                .about("Discard the card that was just drawn.")
+                .about("Discards the card that was just drawn.")
                 .arg(
                     Arg::new("discarded-card")
                         .required(false)
@@ -258,7 +258,7 @@ fn main() -> Result<()> {
 
         .with_command(
             Command::new("swap")
-                .about("Swap the card that was just drawn with a card from the same player.")
+                .about("Swaps the card that was just drawn with a card from the same player.")
                 .arg(
                     Arg::new("index-to-replace")
                         .help("The index of the card that was discarded.")
@@ -312,7 +312,7 @@ fn main() -> Result<()> {
 
         .with_command(
             Command::new("peek")
-                .about("Record that the player whose turn it is peeked at a card.")
+                .about("Records that the player whose turn it is peeked at a card.")
                 .arg(
                     Arg::new("position")
                         .help("The position of the card peeked.")
@@ -335,7 +335,7 @@ fn main() -> Result<()> {
 
         .with_command(
             Command::new("stick")
-                .about("Stick a card.")
+                .about("Sticks a card.")
                 .arg(
                     Arg::new("stick-player")
                         .help("The player sticking the card.")
