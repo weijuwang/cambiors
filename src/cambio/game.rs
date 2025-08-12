@@ -36,6 +36,9 @@ pub struct Game<UnderlyingCard: UnderlyingCardType> {
     /// Whether a valid stick attempt has already been made this turn.
     already_stuck: bool,
 
+    /// The number of cards in circulation.
+    deck_size: usize,
+
     /// The current state of the game.
     state: State<UnderlyingCard>
 }
@@ -85,6 +88,14 @@ impl<UnderlyingCard: UnderlyingCardType + Copy> Game<UnderlyingCard> {
     /// ```
     fn player_card_indices(&self, player: Player) -> Range<usize> {
         0..self.cards[player].len()
+    }
+
+    /// Verifies whether a [CardPosition] points to an existing card in this [Game].
+    ///
+    /// TODO Verify input with this
+    pub fn is_valid_position(&self, position: CardPosition) -> bool {
+        (position.player as Player) < self.num_players()
+            && self.player_card_indices(position.player as Player).contains(&(position.index as usize))
     }
 
     /// Increments the turn, rolling back to `0` if necessary.
@@ -330,6 +341,8 @@ impl DeterminizedGame {
             cambio_caller: partial_info.cambio_caller,
 
             already_stuck: partial_info.already_stuck,
+
+            deck_size: partial_info.deck_size,
 
             state: match partial_info.state {
                 State::AfterDrawing(None) =>
@@ -634,37 +647,40 @@ impl PartialInfoGame {
     /// [bottom_left] and [bottom_right] are the cards that player 0 gets to see at the beginning of
     /// the game. They are stored in indices 2 and 3 respectively.
     pub fn new(num_players: usize, first_player: Player, jokers: bool, bottom_left: Card, bottom_right: Card) -> Self {
+        let deck: Vec<_> = [
+            // Map-like array of card frequencies
+            (Card::Ace, 4),
+            (Card::Two, 4),
+            (Card::Three, 4),
+            (Card::Four, 4),
+            (Card::Five, 4),
+            (Card::Six, 4),
+            (Card::Seven, 4),
+            (Card::Eight, 4),
+            (Card::Nine, 4),
+            (Card::Ten, 4),
+            (Card::Jack, 4),
+            (Card::Queen, 4),
+            (Card::BlackKing, 2),
+            (Card::RedKing, 2),
+            (Card::Joker, if jokers { 2 } else { 0 }),
+        ].into_iter()
+            // Map to collection of &Card
+            .flat_map(|(card, freq)|
+                iter::repeat_n(card, freq)
+            )
+            // Collect into Vec<Card>
+            .collect();
+        let deck_size = deck.len();
+
         let mut result = Self {
             turn: first_player,
             discard_pile: Vec::new(),
-            unseen_cards: [
-                // Map-like array of card frequencies
-                (Card::Ace, 4),
-                (Card::Two, 4),
-                (Card::Three, 4),
-                (Card::Four, 4),
-                (Card::Five, 4),
-                (Card::Six, 4),
-                (Card::Seven, 4),
-                (Card::Eight, 4),
-                (Card::Nine, 4),
-                (Card::Ten, 4),
-                (Card::Jack, 4),
-                (Card::Queen, 4),
-                (Card::BlackKing, 2),
-                (Card::RedKing, 2),
-                (Card::Joker, if jokers { 2 } else { 0 }),
-            ].into_iter()
-                // Map to collection of &Card
-                .flat_map(|(card, freq)|
-                    iter::repeat_n(card, freq)
-                )
-                // Collect into Vec<Card>
-                .collect::<Vec<Card>>(),
-
+            unseen_cards: deck,
             cards: FastJaggedVec::new(num_players),
             already_stuck: false,
             cambio_caller: None,
+            deck_size,
             state: State::BeginningOfTurn
         };
 
@@ -773,6 +789,6 @@ impl PartialInfoGame {
 
     /// Calculates the size of the draw pile.
     pub fn draw_pile_size(&self) -> usize {
-        self.unseen_cards.len() - self.cards.flatten().len()
+        self.deck_size - self.discard_pile.len() - self.cards.flatten().len()
     }
 }
