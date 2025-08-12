@@ -16,7 +16,7 @@ const PROGRAM_NAME: &str = env!("CARGO_PKG_NAME");
 const DESCRIPTION: &str = "Command-line interface for a partial-information Cambio card game API and Monte Carlo tree search.";
 
 /// The banner that is displayed at start-up.
-const BANNER: &str = "Welcome to cambiors! Last updated 12 Aug 2025.";
+const BANNER: &str = "Welcome to cambiors! Last updated 12 Aug 2025.\nPress Ctrl+D to exit. Players and cards are zero-indexed.";
 
 /// The message that is displayed when the user attempts to execute an illegal action.
 const ILLEGAL_ACTION_MESSAGE: &str = "Can't execute this action";
@@ -172,6 +172,8 @@ fn main() -> Result<()> {
             context.next_action = None;
             Ok(Some(game_as_string(context)))
         })
+
+        // TODO Manual
 
         .with_command(
             Command::new("cards")
@@ -388,7 +390,7 @@ fn main() -> Result<()> {
                     Arg::new("stick-player")
                         .help("The player sticking the card.")
                         .required(true)
-                        .value_parser(value_parser!(cambio::Card))
+                        .value_parser(value_parser!(cambio::Player))
                 )
                 .arg(
                     Arg::new("stick-position")

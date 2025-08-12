@@ -69,7 +69,7 @@ pub struct SearchResults {
     ///
     pub non_stick_actions: Vec<(cambio::Action, f32)>,
 
-    ///
+    /// TODO Separate sticks from player 0
     pub sticks: Vec<(cambio::Action, f32)>,
 }
 
