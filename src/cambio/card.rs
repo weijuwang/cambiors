@@ -20,6 +20,18 @@ pub enum Card {
     Joker
 }
 
+/// The result of [Card::pick_known].
+pub enum PickKnownCardResult {
+    /// The two provided cards conflict.
+    Conflicting(Card, Card),
+    
+    /// The card is still unknown.
+    Unknown,
+    
+    /// The card is now known.
+    Ok(Card)
+}
+
 impl Card {
     /// The number of points this card is worth.
     pub fn points(&self) -> i32 {
@@ -40,22 +52,30 @@ impl Card {
         }
     }
 
-    /// Pick the known card out of [a] and [b].
+    /// Pick the known card out of [a] and [b]. This is used in situations where a card might not be
+    /// known and might also be given by the user, but we want to check if the card conflicts with
+    /// what we thought the card was. See [PickKnownCardResult].
     ///
     /// If exactly one of [a] and [b] is [Some], that one is returned as [Ok].
     ///
     /// If either both or none of [a] and [b] are [Some], [Err] is returned.
-    pub fn pick_known(a: Option<Card>, b: Option<Card>) -> Result<Card, ()> {
-       if let Some(a) = a
-            && b.is_none()
-        {
-            Ok(a)
-        } else if a.is_none()
-            && let Some(b) = b
-        {
-            Ok(b)
+    pub fn pick_known(a: Option<Card>, b: Option<Card>) -> PickKnownCardResult {
+        if let Some(a) = a {
+            if let Some(b) = b {
+                if a == b {
+                    PickKnownCardResult::Ok(a)
+                } else {
+                    PickKnownCardResult::Conflicting(a, b)
+                }
+            } else {
+                PickKnownCardResult::Ok(a)
+            }
         } else {
-            Err(())
+            if let Some(b) = b {
+                PickKnownCardResult::Ok(b)
+            } else {
+                PickKnownCardResult::Unknown
+            }
         }
     }
 }

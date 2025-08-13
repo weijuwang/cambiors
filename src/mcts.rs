@@ -152,15 +152,17 @@ impl Node {
         node: &Rc<RefCell<Self>>,
         game: &cambio::PartialInfoGame,
         rng: &mut cambio::CambioRng
-    ) {
+    ) -> cambio::ExecuteActionResult<()> {
         let mut det = cambio::DeterminizedGame::randomized_from(game, rng);
-        let new_node = Self::select_and_expand(node, &mut det, rng);
+        let new_node = Self::select_and_expand(node, &mut det, rng)?;
 
         let winners = loop {
             // Try to randomly choose an action
             if let Some(&action) = det.legal_actions().choose(rng) {
                 // Execute it
-                det.execute(action, rng);
+                if let Err(reason) = det.execute(action, rng) {
+                    panic!("{}", reason);
+                }
             } else {
                 // If no legal actions, then return the winners
                 break det.winners();
@@ -168,13 +170,14 @@ impl Node {
         };
 
         Self::backprop(new_node, &winners, 1. / winners.len() as f32);
+        Ok(())
     }
 
     fn select_and_expand(
         node: &Rc<RefCell<Self>>,
         game: &mut cambio::DeterminizedGame,
         rng: &mut cambio::CambioRng
-    ) -> Rc<RefCell<Self>> {
+    ) -> cambio::ExecuteActionResult<Rc<RefCell<Self>>> {
         let legal_actions = game.legal_actions();
         let unexpanded_legal_actions = legal_actions
             .iter()
@@ -187,7 +190,7 @@ impl Node {
             /* There is an unexpanded legal action */
 
             // Execute the action
-            game.execute(unexpanded_action, rng);
+            game.execute(unexpanded_action, rng)?;
 
             // Create a new child node to represent it
             let expanded_node = Node::new(
@@ -202,10 +205,10 @@ impl Node {
                 .insert(unexpanded_action, Rc::new(RefCell::new(expanded_node)));
 
             // Return the added node
-            Rc::clone(
+            Ok(Rc::clone(
                 &node_borrowed
                     .children.borrow()[&unexpanded_action]
-            )
+            ))
         } else {
             /*
             All legal actions from [game] have been expanded; select one and continue recursively
@@ -226,7 +229,7 @@ impl Node {
 
             // No children, can't select a node; stop recursion and return self
             if legal_children.is_empty() {
-                return Rc::clone(node);
+                return Ok(Rc::clone(node));
             }
 
             // Find child with highest UCT. The code is wrapped in a block to prevent it being
@@ -248,7 +251,7 @@ impl Node {
             };
 
             // Execute the action
-            game.execute(action, rng);
+            game.execute(action, rng)?;
 
             // Expand the child
             Node::select_and_expand(child, game, rng)

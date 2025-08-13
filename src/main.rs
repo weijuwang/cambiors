@@ -18,9 +18,6 @@ const DESCRIPTION: &str = "Command-line interface for a partial-information Camb
 /// The banner that is displayed at start-up.
 const BANNER: &str = "Welcome to cambiors! Last updated 12 Aug 2025.\nPress Ctrl+D to exit. Players and cards are zero-indexed.";
 
-/// The message that is displayed when the user attempts to execute an illegal action.
-const ILLEGAL_ACTION_MESSAGE: &str = "Can't execute this action";
-
 /// The default number of playouts in Monte Carlo tree search.
 const DEFAULT_PLAYOUTS: usize = 100_000;
 
@@ -164,8 +161,8 @@ fn main() -> Result<()> {
                     Ok(()) => {
                         context.action_history.push(action);
                     }
-                    Err(()) => {
-                        println!("  {}", ILLEGAL_ACTION_MESSAGE);
+                    Err(error) => {
+                        println!("  Can't execute action: {}", error);
                     }
                 }
             }
