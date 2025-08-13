@@ -13,13 +13,13 @@ pub fn search_from(
     game: &cambio::PartialInfoGame,
     num_playouts: usize,
     rng: &mut cambio::CambioRng
-) -> SearchResults {
+) -> cambio::ExecuteActionResult<SearchResults> {
     let root = Rc::new(RefCell::new(
         Node::new(game, None, Weak::new())
     ));
 
     for _ in 0..num_playouts {
-        Node::execute_playout(&root, game, rng);
+        Node::execute_playout(&root, game, rng)?;
     }
 
     let root_winrate = root.borrow().winrate();
@@ -58,7 +58,7 @@ pub fn search_from(
         f32::partial_cmp(b, a).unwrap()
     );
 
-    SearchResults {  root_winrate, non_stick_actions, sticks }
+    Ok(SearchResults {  root_winrate, non_stick_actions, sticks })
 }
 
 ///

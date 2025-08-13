@@ -211,27 +211,34 @@ fn main() -> Result<()> {
                 .aliases(["mcts", "montecarlo"]),
             |_, context| {
                 let start = Instant::now();
-                let search_results = mcts::search_from(&context.game, context.num_playouts, &mut context.rng);
-                let micros = start.elapsed().as_micros() as f32;
+                match mcts::search_from(&context.game, context.num_playouts, &mut context.rng) {
+                    Ok(search_results) => {
+                        let micros = start.elapsed().as_micros() as f32;
 
-                println!(
-                    "{} ({} playouts, {} us/playout)",
-                    paint_yellow_bold("Search results"),
-                    context.num_playouts,
-                    micros / context.num_playouts as f32
-                );
-                println!(
-                    "  {}: {}%",
-                    paint_yellow_bold("From root"),
-                    (search_results.root_winrate * 100.).round()
-                );
-                for (action, winrate) in search_results.non_stick_actions {
-                    println!("    {action}: {}%", (winrate * 100.).round());
+                        println!(
+                            "{} ({} playouts, {} us/playout)",
+                            paint_yellow_bold("Search results"),
+                            context.num_playouts,
+                            micros / context.num_playouts as f32
+                        );
+                        println!(
+                            "  {}: {}%",
+                            paint_yellow_bold("From root"),
+                            (search_results.root_winrate * 100.).round()
+                        );
+                        for (action, winrate) in search_results.non_stick_actions {
+                            println!("    {action}: {}%", (winrate * 100.).round());
+                        }
+                        println!("  {}", paint_yellow_bold("Sticks"));
+                        for (action, winrate) in search_results.sticks {
+                            println!("    {action}: {}%", (winrate * 100.).round());
+                        }
+                    }
+                    Err(reason) => {
+                        println!("Can't search: {reason}")
+                    }
                 }
-                println!("  {}", paint_yellow_bold("Sticks"));
-                for (action, winrate) in search_results.sticks {
-                    println!("    {action}: {}%", (winrate * 100.).round());
-                }
+
                 Ok(None)
             }
         )
@@ -262,7 +269,7 @@ fn main() -> Result<()> {
                             println!("  {}", paint_yellow_bold(&format!("{}", action)));
                         }
                         _ => {
-                            println!("  {}", action);
+                            println!("  {action}",);
                         }
                     }
                 }
