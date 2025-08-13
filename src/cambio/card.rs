@@ -24,10 +24,10 @@ pub enum Card {
 pub enum PickKnownCardResult {
     /// The two provided cards conflict.
     Conflicting(Card, Card),
-    
+
     /// The card is still unknown.
     Unknown,
-    
+
     /// The card is now known.
     Ok(Card)
 }
@@ -70,12 +70,10 @@ impl Card {
             } else {
                 PickKnownCardResult::Ok(a)
             }
+        } else if let Some(b) = b {
+            PickKnownCardResult::Ok(b)
         } else {
-            if let Some(b) = b {
-                PickKnownCardResult::Ok(b)
-            } else {
-                PickKnownCardResult::Unknown
-            }
+            PickKnownCardResult::Unknown
         }
     }
 }
@@ -222,7 +220,7 @@ impl Display for CardPosition {
 
 impl FromStr for CardPosition {
     type Err = clap::Error;
-    
+
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let coords: Vec<&str> = s
             .split('.')
