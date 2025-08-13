@@ -122,6 +122,14 @@ impl<UnderlyingCard: UnderlyingCardType + Copy> Game<UnderlyingCard> {
         self.cards.num_players()
     }
 
+    /// The expected value of an unseen card given the information available in this [Game] state.
+    pub fn avg_unseen(&self) -> f32 {
+        let sum = self.unseen_cards.iter()
+            .map(|card| card.points())
+            .sum::<i32>() as f32;
+        sum / self.unseen_cards.len() as f32
+    }
+
     /// Returns the next state after discarding a card.
     fn state_after_discarding(card: Card) -> State<UnderlyingCard> {
         match card {
