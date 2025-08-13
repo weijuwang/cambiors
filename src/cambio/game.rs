@@ -407,7 +407,7 @@ impl<UnderlyingCard: UnderlyingCardType + Copy> Game<UnderlyingCard> {
                     return Err(InvalidCardPosition(peeked_card));
                 }
 
-                if peeked_card.player == pos_a.player || peeked_card.player == pos_b.player {
+                if pos_a.player == pos_b.player {
                     return Err(CannotSwitchSamePlayerCards(pos_a, pos_b))
                 }
 
