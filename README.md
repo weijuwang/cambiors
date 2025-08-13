@@ -64,6 +64,3 @@ If you try to stick with a card and it turns out it's not the same rank (*false-
 After any stick or stick attempt is finished, the flow of play resumes as if the stick didn't happen.
 
 In the unlikely event that a player tries so many false-sticks that they draw the entire draw deck to their pile (and eventually the discard pile when it becomes the draw deck), the game ends immediately because there are no more cards to draw from and thus no meaningful actions.
-
-## REPL
-This program will soon have a REPL to interact with it. I have not implemented this yet.
