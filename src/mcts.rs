@@ -79,7 +79,7 @@ pub struct SearchResults {
 /// least one strong reference by its parent and weak references by its children.
 #[derive(Debug)]
 struct Node {
-    /// The number of wins that [player] has earned from this position.
+    /// The number of wins that [player] has earned from this game.
     wins: f32,
 
     /// The number of playouts that have been executed on this node.

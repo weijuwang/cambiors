@@ -329,12 +329,12 @@ fn main() -> Result<()> {
                 let index_to_replace = *args.get_one("index-to-replace").unwrap();
                 let replaced_card = args.get_one("replaced-card").copied();
 
-                let position_to_replace = cambio::CardPosition::new(
+                let location_to_replace = cambio::CardLocation::new(
                     context.game.turn(), index_to_replace
                 );
 
                 context.next_action = Some((
-                    cambio::Action::SwapDrawnCardForOwn(position_to_replace),
+                    cambio::Action::SwapDrawnCardForOwn(location_to_replace),
                     replaced_card
                 ));
                 Ok(None)
@@ -345,20 +345,20 @@ fn main() -> Result<()> {
             Command::new("switch")
                 .about("Switches two players' cards.")
                 .arg(
-                    Arg::new("position-a")
-                        .help("The position of the first card to swap.")
+                    Arg::new("location-a")
+                        .help("The location of the first card to swap.")
                         .required(true)
-                        .value_parser(value_parser!(cambio::CardPosition))
+                        .value_parser(value_parser!(cambio::CardLocation))
                 )
                 .arg(
-                    Arg::new("position-b")
-                        .help("The position of the second card to swap.")
+                    Arg::new("location-b")
+                        .help("The location of the second card to swap.")
                         .required(true)
-                        .value_parser(value_parser!(cambio::CardPosition)),
+                        .value_parser(value_parser!(cambio::CardLocation)),
                 ),
             |args, context| {
-                let pos_a = *args.get_one("position-a").unwrap();
-                let pos_b = *args.get_one("position-b").unwrap();
+                let pos_a = *args.get_one("location-a").unwrap();
+                let pos_b = *args.get_one("location-b").unwrap();
                 context.next_action = Some((cambio::Action::BlindSwitch(pos_a, pos_b), None));
                 Ok(None)
             }
@@ -368,10 +368,10 @@ fn main() -> Result<()> {
             Command::new("peek")
                 .about("Records that the player whose turn it is peeked at a card.")
                 .arg(
-                    Arg::new("position")
-                        .help("The position of the card peeked.")
+                    Arg::new("location")
+                        .help("The location of the card peeked.")
                         .required(true)
-                        .value_parser(value_parser!(cambio::CardPosition)),
+                        .value_parser(value_parser!(cambio::CardLocation)),
                 )
                 .arg(
                     Arg::new("peeked-card")
@@ -380,9 +380,9 @@ fn main() -> Result<()> {
                         .value_parser(value_parser!(cambio::Card))
                 ),
             |args, context| {
-                let position = *args.get_one("position").unwrap();
+                let location = *args.get_one("location").unwrap();
                 let peeked_card = args.get_one("peeked-card").copied();
-                context.next_action = Some((cambio::Action::Peek(position), peeked_card));
+                context.next_action = Some((cambio::Action::Peek(location), peeked_card));
                 Ok(None)
             }
         )
@@ -397,22 +397,22 @@ fn main() -> Result<()> {
                         .value_parser(value_parser!(cambio::Player))
                 )
                 .arg(
-                    Arg::new("stick-position")
-                        .help("The position of the card to stick.")
+                    Arg::new("stick-location")
+                        .help("The location of the card to stick.")
                         .required(true)
-                        .value_parser(value_parser!(cambio::CardPosition))
+                        .value_parser(value_parser!(cambio::CardLocation))
                 )
                 .arg(
-                    Arg::new("give-away-position")
-                        .help("The position of the card to give away.")
+                    Arg::new("give-away-location")
+                        .help("The location of the card to give away.")
                         .required(false)
-                        .value_parser(value_parser!(cambio::CardPosition))
+                        .value_parser(value_parser!(cambio::CardLocation))
                 ),
             |args, context| {
                 let stick_player = *args.get_one("stick-player").unwrap();
-                let stick_position = *args.get_one("stick-position").unwrap();
-                let give_away_position = args.get_one("give-away-position").copied();
-                context.next_action = Some((cambio::Action::Stick { stick_player, stick_position, give_away_position }, None));
+                let stick_location = *args.get_one("stick-location").unwrap();
+                let give_away_location = args.get_one("give-away-location").copied();
+                context.next_action = Some((cambio::Action::Stick { stick_player, stick_location, give_away_location }, None));
                 Ok(None)
             }
         )

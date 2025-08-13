@@ -192,17 +192,17 @@ impl CardAndVisibility<Option<Card>> {
     }
 }
 
-/// The position of a card in someone's pile, identified by its [player] and [index].
+/// The location of a card in someone's pile, identified by its [player] and [index].
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct CardPosition {
-    /// The player to whom the card identified by this [CardPosition] belongs to.
+pub struct CardLocation {
+    /// The player to whom the card identified by this [CardLocation] belongs to.
     pub player: u8,
-    /// The index of the card within [player]'s cards that this [CardPosition] identifies.
+    /// The index of the card within [player]'s cards that this [CardLocation] identifies.
     pub index: u8
 }
 
-impl CardPosition {
-    /// Initializes a [CardPosition] while getting rid of the boilerplate code to cast [player] and
+impl CardLocation {
+    /// Initializes a [CardLocation] while getting rid of the boilerplate code to cast [player] and
     /// [index] to the correct types.
     pub fn new(player: usize, index: usize) -> Self {
         Self {
@@ -212,13 +212,13 @@ impl CardPosition {
     }
 }
 
-impl Display for CardPosition {
+impl Display for CardLocation {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "P{} #{}", self.player, self.index)
     }
 }
 
-impl FromStr for CardPosition {
+impl FromStr for CardLocation {
     type Err = clap::Error;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -227,7 +227,7 @@ impl FromStr for CardPosition {
             .collect();
 
         if coords.len() != 2 {
-            return Err(clap::Error::raw(clap::error::ErrorKind::ValueValidation, "Too many numbers in card position"));
+            return Err(clap::Error::raw(clap::error::ErrorKind::ValueValidation, "Too many numbers in card location"));
         }
 
         let player: Result<u8, _> =
@@ -238,7 +238,7 @@ impl FromStr for CardPosition {
         if let (Ok(player), Ok(index)) = (player, index) {
             Ok(Self { player, index })
         } else {
-            Err(clap::Error::raw(clap::error::ErrorKind::ValueValidation, "Not a card position"))
+            Err(clap::Error::raw(clap::error::ErrorKind::ValueValidation, "Not a card location"))
         }
     }
 }

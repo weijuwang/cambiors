@@ -40,7 +40,7 @@ pub enum State<UnderlyingCard: UnderlyingCardType> {
     AfterDiscard9Or10,
     AfterDiscardFace,
     AfterDiscardBlackKing,
-    AfterBlackKingPeeked(CardPosition),
+    AfterBlackKingPeeked(CardLocation),
     EndOfTurn,
     EndOfGame
 }
@@ -55,22 +55,22 @@ pub enum Action {
     Discard,
 
     /// Swap the card just drawn with a card in the player's own pile.
-    SwapDrawnCardForOwn(CardPosition),
+    SwapDrawnCardForOwn(CardLocation),
 
     /// Swap any two cards from different players.
     ///
     /// If switching cards after discarding a black king, the first card is always the one that was
     /// looked at.
-    BlindSwitch(CardPosition, CardPosition),
+    BlindSwitch(CardLocation, CardLocation),
 
     /// Peek at a card.
-    Peek(CardPosition),
+    Peek(CardLocation),
 
     /// Stick a card.
     Stick {
         stick_player: Player,
-        stick_position: CardPosition,
-        give_away_position: Option<CardPosition>
+        stick_location: CardLocation,
+        give_away_location: Option<CardLocation>
     },
 
     /// Call "Cambio," beginning the endgame.
@@ -96,10 +96,10 @@ impl Display for Action {
                 write!(f, "Switch {a} and {b}"),
             Action::Peek(pos) =>
                 write!(f, "Peek {pos}"),
-            Action::Stick { stick_player, stick_position, give_away_position } =>
-                write!(f, "Stick  {stick_position} by {stick_player}{}",
-                    if let Some(give_away_position) = give_away_position {
-                        format!(", give-away {give_away_position}")
+            Action::Stick { stick_player, stick_location, give_away_location } =>
+                write!(f, "Stick  {stick_location} by {stick_player}{}",
+                       if let Some(give_away_location) = give_away_location {
+                        format!(", give-away {give_away_location}")
                     } else {
                         String::new()
                     }

@@ -28,7 +28,7 @@ impl<T: UnderlyingCardType + Copy> FastJaggedVec<T> {
     }
 
     /// Returns all the cards flattened with their indices.
-    pub fn enumerate(&self) -> Vec<(CardPosition, &CardAndVisibility<T>)> {
+    pub fn enumerate(&self) -> Vec<(CardLocation, &CardAndVisibility<T>)> {
         self.cards.iter().enumerate()
             .map(|(raw_index, card)| {
                 let player = (0..self.num_players())
@@ -36,41 +36,41 @@ impl<T: UnderlyingCardType + Copy> FastJaggedVec<T> {
                     .max()
                     .expect("Something's wrong");
                 (
-                    CardPosition::new(player, raw_index - self.player_start_indices[player]),
+                    CardLocation::new(player, raw_index - self.player_start_indices[player]),
                     card
                 )
             })
             .collect()
     }
 
-    /// Returns all card positions for players who indices are greater than or equal to
+    /// Returns all card locations for players who indices are greater than or equal to
     /// [starting_from].
-    pub fn positions_from_player(&self, starting_from: usize) -> Vec<CardPosition> {
+    pub fn locations_from_player(&self, starting_from: usize) -> Vec<CardLocation> {
         (self.player_start_indices[starting_from]..self.cards.len())
             .map(|raw_index| {
                 let player = (starting_from..self.num_players())
                     .filter(|p| raw_index >= self.player_start_indices[*p])
                     .max()
                     .expect("Something's wrong");
-                CardPosition::new(player, raw_index - self.player_start_indices[player])
+                CardLocation::new(player, raw_index - self.player_start_indices[player])
             })
             .collect()
     }
 
     /// Swaps two cards.
-    pub fn swap(&mut self, a: CardPosition, b: CardPosition) {
+    pub fn swap(&mut self, a: CardLocation, b: CardLocation) {
         let idx_a = self.raw_index(a);
         let idx_b = self.raw_index(b);
         self.cards.swap(idx_a, idx_b);
     }
 
-    /// Remove the card at [position] and return the card that was there. All cards with higher
+    /// Remove the card at [location] and return the card that was there. All cards with higher
     /// indices or higher player numbers are shifted over.
-    pub fn remove_at(&mut self, position: CardPosition) -> T {
-        let removed_card = self.cards.remove(self.raw_index(position));
+    pub fn remove_at(&mut self, location: CardLocation) -> T {
+        let removed_card = self.cards.remove(self.raw_index(location));
 
         // Shift player indices over
-        for player in position.player as usize + 1 ..= self.num_players() {
+        for player in location.player as usize + 1 ..= self.num_players() {
             self.player_start_indices[player] -= 1;
         }
 
@@ -88,19 +88,19 @@ impl<T: UnderlyingCardType + Copy> FastJaggedVec<T> {
     }
 
     /// Moves a card to the end of another player's pile.
-    pub fn move_card_to_player(&mut self, original_position: CardPosition, player: Player) {
-        let moved_card = self[original_position];
-        self.remove_at(original_position);
+    pub fn move_card_to_player(&mut self, original_location: CardLocation, player: Player) {
+        let moved_card = self[original_location];
+        self.remove_at(original_location);
         self.add_to_player(player, moved_card);
         
         // TODO Better implementation that doesn't go back and forth with index shifting
     }
 
     /// Obtains the raw index in [player_indices] that corresponds to the card referred to by
-    /// [position].
-    fn raw_index(&self, position: CardPosition) -> usize {
-        self.player_start_indices[position.player as usize]
-            + position.index as usize
+    /// [location].
+    fn raw_index(&self, location: CardLocation) -> usize {
+        self.player_start_indices[location.player as usize]
+            + location.index as usize
     }
 }
 
@@ -160,19 +160,19 @@ impl FastJaggedVec<Option<Card>> {
     }
 }
 
-/// Index with [CardPosition] to get a specific card.
-impl<T: UnderlyingCardType + Copy> Index<CardPosition> for FastJaggedVec<T> {
+/// Index with [CardLocation] to get a specific card.
+impl<T: UnderlyingCardType + Copy> Index<CardLocation> for FastJaggedVec<T> {
     type Output = CardAndVisibility<T>;
 
-    fn index(&self, position: CardPosition) -> &Self::Output {
-        &self.cards[self.raw_index(position)]
+    fn index(&self, location: CardLocation) -> &Self::Output {
+        &self.cards[self.raw_index(location)]
     }
 }
 
-impl<T: UnderlyingCardType + Copy> IndexMut<CardPosition> for FastJaggedVec<T> {
-    fn index_mut(&mut self, position: CardPosition) -> &mut Self::Output {
+impl<T: UnderlyingCardType + Copy> IndexMut<CardLocation> for FastJaggedVec<T> {
+    fn index_mut(&mut self, location: CardLocation) -> &mut Self::Output {
         // For some reason Rust won't let me move this into the brackets
-        let idx = self.raw_index(position);
+        let idx = self.raw_index(location);
         &mut self.cards[idx]
     }
 }

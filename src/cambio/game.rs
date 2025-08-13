@@ -11,7 +11,7 @@ use std::fmt::Formatter;
 /// know of has its own enum variant.
 /// TODO Invalid stick error?
 pub enum CannotExecuteReason {
-    /// The caller claims that the card at [position] is [attested_card], but we have it as [actual_card].
+    /// The caller claims that the card is [attested_card], but we have it as [actual_card].
     ConflictingInfo {
         actual_card: Card,
         attested_card: Card
@@ -20,34 +20,34 @@ pub enum CannotExecuteReason {
     /// We don't know a card and need it to complete the action, but the caller didn't provide it.
     NotEnoughInfo,
 
-    /// There is no such card position in this game.
-    InvalidCardPosition(CardPosition),
+    /// There is no such card location in this game.
+    InvalidCardLocation(CardLocation),
 
     /// The caller claims that the attested card was just revealed, but we know this is impossible
     /// because it isn't in the list of unseen cards. This can be a drawn card or a player's card.
     ImpossibleUnseenCard(Card),
 
     /// After drawing, the player tried to swap the drawn card with another player's card.
-    CannotSwapWithOther(CardPosition),
+    CannotSwapWithOther(CardLocation),
 
     /// Peeking your own card is not allowed here, but peeking someone else's card is.
-    CannotPeekOwn(CardPosition),
+    CannotPeekOwn(CardLocation),
 
     /// Peeking someone else's card is not allowed here, but peeking your own card is.
-    CannotPeekOther(CardPosition),
+    CannotPeekOther(CardLocation),
 
-    /// This switch is not possible after drawing a black king because none of the two card positions
+    /// This switch is not possible after drawing a black king because none of the two card locations
     /// is the card that the player just peeked at.
-    InvalidBlackKingSwitch(CardPosition, CardPosition),
+    InvalidBlackKingSwitch(CardLocation, CardLocation),
 
     /// This switch is not possible because the cards belong to the same player.
-    CannotSwitchSamePlayerCards(CardPosition, CardPosition),
+    CannotSwitchSamePlayerCards(CardLocation, CardLocation),
 
     /// Calling Cambio is not possible because another player already did it.
     CambioAlreadyCalled(Player),
 
     /// The discard pile is empty, so sticking is not possible here.
-    StickOnEmptyDiscardPile(CardPosition),
+    StickOnEmptyDiscardPile(CardLocation),
 
     /// This action can't be executed in the current state.
     IllegalAction
@@ -62,24 +62,24 @@ impl Display for CannotExecuteReason {
                 write!(f, "Card is known to be {actual_card} but attested as {attested_card}"),
             NotEnoughInfo =>
                 write!(f, "Card wasn't given"),
-            InvalidCardPosition(position) =>
-                write!(f, "Invalid card position {position}"),
+            InvalidCardLocation(location) =>
+                write!(f, "Invalid card location {location}"),
             ImpossibleUnseenCard(attested_card) =>
                 write!(f, "Revealed card can't be {attested_card} as attested"),
-            CannotSwapWithOther(position) =>
-                write!(f, "Cannot swap drawn card with {position}; must swap with own card or discard"),
-            CannotPeekOwn(position) =>
-                write!(f, "Can't peek {position}; must peek another player's card or pass"),
-            CannotPeekOther(position) =>
-                write!(f, "Can't peek {position}; must peek your own card or pass"),
+            CannotSwapWithOther(location) =>
+                write!(f, "Cannot swap drawn card with {location}; must swap with own card or discard"),
+            CannotPeekOwn(location) =>
+                write!(f, "Can't peek {location}; must peek another player's card or pass"),
+            CannotPeekOther(location) =>
+                write!(f, "Can't peek {location}; must peek your own card or pass"),
             InvalidBlackKingSwitch(a, b) =>
                 write!(f, "Can't switch {a} with {b} after discarding black king"),
             CannotSwitchSamePlayerCards(a, b) =>
                 write!(f, "Can't switch {a} and {b} because they belong to the same player"),
             CambioAlreadyCalled(player) =>
                 write!(f, "Can't call Cambio because {player} already did so"),
-            StickOnEmptyDiscardPile(position) =>
-                write!(f, "Can't stick {position} because discard pile is empty"),
+            StickOnEmptyDiscardPile(location) =>
+                write!(f, "Can't stick {location} because discard pile is empty"),
             IllegalAction =>
                 write!(f, "This action is illegal in the current game state")
         }
@@ -95,7 +95,7 @@ pub struct Game<UnderlyingCard: UnderlyingCardType> {
     /// The discard pile. Cards are in the order they were discarded.
     discard_pile: Vec<Card>,
 
-    /// All cards that are in an unknown position.
+    /// All cards that are in an unknown location.
     ///
     /// When [UnderlyingCard] is [Card], this is the draw deck.
     ///
@@ -168,12 +168,12 @@ impl<UnderlyingCard: UnderlyingCardType + Copy> Game<UnderlyingCard> {
         0..self.cards[player].len()
     }
 
-    /// Verifies whether a [CardPosition] points to an existing card in this [Game].
+    /// Verifies whether a [CardLocation] points to an existing card in this [Game].
     ///
     /// TODO Verify input with this
-    pub fn is_valid_position(&self, position: CardPosition) -> bool {
-        (position.player as Player) < self.num_players()
-            && self.player_card_indices(position.player as Player).contains(&(position.index as usize))
+    pub fn is_valid_location(&self, location: CardLocation) -> bool {
+        (location.player as Player) < self.num_players()
+            && self.player_card_indices(location.player as Player).contains(&(location.index as usize))
     }
 
     /// Increments the turn, rolling back to `0` if necessary.
@@ -237,24 +237,24 @@ impl<UnderlyingCard: UnderlyingCardType + Copy> Game<UnderlyingCard> {
     /// TODO False sticking
     fn execute_if_common_behavior(&mut self, action: Action) -> ExecuteActionResult<bool> {
         match (self.state, action) {
-            (_, Action::Stick { stick_player: _, stick_position, give_away_position }) => {
-                if !self.is_valid_position(stick_position) {
-                    return Err(InvalidCardPosition(stick_position));
+            (_, Action::Stick { stick_player: _, stick_location, give_away_location }) => {
+                if !self.is_valid_location(stick_location) {
+                    return Err(InvalidCardLocation(stick_location));
                 }
 
-                if let Some(give_away_position) = give_away_position
-                    && !self.is_valid_position(give_away_position)
+                if let Some(give_away_location) = give_away_location
+                    && !self.is_valid_location(give_away_location)
                 {
-                    return Err(InvalidCardPosition(give_away_position));
+                    return Err(InvalidCardLocation(give_away_location));
                 }
 
                 /* Execute the stick */
                 self.already_stuck = true;
-                self.cards.remove_at(stick_position);
+                self.cards.remove_at(stick_location);
                 if let Some(&discard_pile_top) = self.discard_pile.last() {
                     self.discard_pile.push(discard_pile_top);
                 } else {
-                    return Err(StickOnEmptyDiscardPile(stick_position));
+                    return Err(StickOnEmptyDiscardPile(stick_location));
                 }
 
                 // If a card was peeked previously in preparation for a black king swap, we may need to
@@ -265,69 +265,69 @@ impl<UnderlyingCard: UnderlyingCardType + Copy> Game<UnderlyingCard> {
                 Alice discards a black king and peeks at one of Bob's cards. Before Alice can decide
                 what to do with it, one of the following happens:
                 A: Any player sticks one of Bob's other cards. Since Bob now has one less card, any
-                  [CardPosition] pointing to one of Bob's cards might not point to the same card it
+                  [CardLocation] pointing to one of Bob's cards might not point to the same card it
                   originally did -- elements shift when one is removed. Therefore, we need to update the
-                  state so the position points to the same card.
+                  state so the location points to the same card.
                 B: Any player sticks the card that Alice peeked. (This scenario applies to the code for
                   [StickWithoutGiveAway] above as well.) Alice needs to choose a new card.
-                C: Bob sticks someone else's card and gives away the card Alice peeked. The position of
+                C: Bob sticks someone else's card and gives away the card Alice peeked. The location of
                   the card Alice peeked at needs to be updated to point to the same card now belonging
                   to a different player.
 
                 TODO Is there seriously not a better way to do this? Maybe immut reference to card instead
-                of card positions? I'm basically managing pointers manually which is not very safe
+                of card locations? I'm basically managing pointers manually which is not very safe
                  */
                 // If a card was peeked previously in preparation for a black king swap, we may need to
                 // adjust the index of that card so it still points to the same card
-                if let State::AfterBlackKingPeeked(peeked_position) = self.state {
-                    if peeked_position.player == stick_position.player {
+                if let State::AfterBlackKingPeeked(peeked_location) = self.state {
+                    if peeked_location.player == stick_location.player {
                         // If the peeked card and the stuck card belong to the same player
-                        match peeked_position.index.cmp(&stick_position.index) {
+                        match peeked_location.index.cmp(&stick_location.index) {
                             Ordering::Less => {}
                             // ~~~ SCENARIO B ~~~
-                            // `stick_position == peeked_position`
+                            // `stick_location == peeked_location`
                             // The card that got peeked at got stuck
                             // Let the player peek another one
                             Ordering::Equal => {
                                 self.state = State::AfterDiscardBlackKing
                             }
                             // ~~~ SCENARIO A ~~~
-                            // [peeked_position] points to something different from what it did originally
+                            // [peeked_location] points to something different from what it did originally
                             // because everything got shifted over
                             Ordering::Greater => {
-                                self.state = State::AfterBlackKingPeeked(CardPosition {
-                                    player: peeked_position.player,
-                                    index: peeked_position.index - 1
+                                self.state = State::AfterBlackKingPeeked(CardLocation {
+                                    player: peeked_location.player,
+                                    index: peeked_location.index - 1
                                 })
                             }
                         }
-                    } else if let Some(give_away_position) = give_away_position
-                        && peeked_position.player == give_away_position.player
+                    } else if let Some(give_away_location) = give_away_location
+                        && peeked_location.player == give_away_location.player
                     {
                         // If the peeked card and the give-away card belong to the same player
-                        match peeked_position.index.cmp(&stick_position.index) {
+                        match peeked_location.index.cmp(&stick_location.index) {
                             Ordering::Less => {}
                             // ~~~ SCENARIO C ~~~
-                            // `stick_position == give_away_position`
+                            // `stick_location == give_away_location`
                             // The peeked card was given away
                             Ordering::Equal => {
-                                self.state = State::AfterBlackKingPeeked(CardPosition {
+                                self.state = State::AfterBlackKingPeeked(CardLocation {
                                     // The peeked card has been given away to the player whose
                                     // card was stuck
-                                    player: stick_position.player,
+                                    player: stick_location.player,
                                     // This is the CURRENT number of cards they have; they will have
                                     // one more than this after the give-away
-                                    index: self.cards[stick_position.player as Player]
+                                    index: self.cards[stick_location.player as Player]
                                         .len() as u8
                                 })
                             }
                             // ~~~ SCENARIO A ~~
-                            // [peeked_position] points to something different from what it
+                            // [peeked_location] points to something different from what it
                             // did originally because everything got shifted over
                             Ordering::Greater => {
-                                self.state = State::AfterBlackKingPeeked(CardPosition {
-                                    player: peeked_position.player,
-                                    index: peeked_position.index - 1
+                                self.state = State::AfterBlackKingPeeked(CardLocation {
+                                    player: peeked_location.player,
+                                    index: peeked_location.index - 1
                                 })
                             }
                         }
@@ -335,9 +335,9 @@ impl<UnderlyingCard: UnderlyingCardType + Copy> Game<UnderlyingCard> {
                 }
 
                 /* Execute giveaway */
-                if let Some(give_away_position) = give_away_position {
+                if let Some(give_away_location) = give_away_location {
                     self.cards
-                        .move_card_to_player(give_away_position, stick_position.player as Player);
+                        .move_card_to_player(give_away_location, stick_location.player as Player);
                 }
 
                 Ok(true)
@@ -354,41 +354,41 @@ impl<UnderlyingCard: UnderlyingCardType + Copy> Game<UnderlyingCard> {
                 Ok(true)
             }
 
-            (State::AfterDiscard7Or8, Action::Peek(position)) => {
-                if !self.is_valid_position(position) {
-                    return Err(InvalidCardPosition(position));
+            (State::AfterDiscard7Or8, Action::Peek(location)) => {
+                if !self.is_valid_location(location) {
+                    return Err(InvalidCardLocation(location));
                 }
 
-                if position.player != self.turn as u8 {
-                    return Err(CannotPeekOther(position))
+                if location.player != self.turn as u8 {
+                    return Err(CannotPeekOther(location))
                 }
 
-                self.cards[position].show_to(self.turn);
+                self.cards[location].show_to(self.turn);
                 self.state = State::EndOfTurn;
                 Ok(true)
             }
 
-            (State::AfterDiscard9Or10, Action::Peek(position)) => {
-                if !self.is_valid_position(position) {
-                    return Err(InvalidCardPosition(position));
+            (State::AfterDiscard9Or10, Action::Peek(location)) => {
+                if !self.is_valid_location(location) {
+                    return Err(InvalidCardLocation(location));
                 }
 
-                if position.player == self.turn as u8 {
-                    return Err(CannotPeekOwn(position))
+                if location.player == self.turn as u8 {
+                    return Err(CannotPeekOwn(location))
                 }
 
-                self.cards[position].show_to(self.turn);
+                self.cards[location].show_to(self.turn);
                 self.state = State::EndOfTurn;
                 Ok(true)
             }
 
             (State::AfterDiscardFace, Action::BlindSwitch(pos_a, pos_b)) => {
-                if !self.is_valid_position(pos_a) {
-                    return Err(InvalidCardPosition(pos_a));
+                if !self.is_valid_location(pos_a) {
+                    return Err(InvalidCardLocation(pos_a));
                 }
 
-                if !self.is_valid_position(pos_b) {
-                    return Err(InvalidCardPosition(pos_b));
+                if !self.is_valid_location(pos_b) {
+                    return Err(InvalidCardLocation(pos_b));
                 }
 
                 if pos_a.player == pos_b.player {
@@ -403,8 +403,8 @@ impl<UnderlyingCard: UnderlyingCardType + Copy> Game<UnderlyingCard> {
             (State::AfterBlackKingPeeked(peeked_card),
                 Action::BlindSwitch(pos_a, pos_b)
             ) => {
-                if !self.is_valid_position(peeked_card) {
-                    return Err(InvalidCardPosition(peeked_card));
+                if !self.is_valid_location(peeked_card) {
+                    return Err(InvalidCardLocation(peeked_card));
                 }
 
                 if pos_a.player == pos_b.player {
@@ -420,17 +420,17 @@ impl<UnderlyingCard: UnderlyingCardType + Copy> Game<UnderlyingCard> {
                 Ok(true)
             }
 
-            (State::AfterDiscardBlackKing, Action::Peek(position)) => {
-                if !self.is_valid_position(position) {
-                    return Err(InvalidCardPosition(position));
+            (State::AfterDiscardBlackKing, Action::Peek(location)) => {
+                if !self.is_valid_location(location) {
+                    return Err(InvalidCardLocation(location));
                 }
 
-                if position.player == self.turn as u8 {
-                    return Err(CannotPeekOwn(position))
+                if location.player == self.turn as u8 {
+                    return Err(CannotPeekOwn(location))
                 }
 
-                self.cards[position].show_to(self.turn);
-                self.state = State::AfterBlackKingPeeked(position);
+                self.cards[location].show_to(self.turn);
+                self.state = State::AfterBlackKingPeeked(location);
                 Ok(true)
             }
 
@@ -465,16 +465,16 @@ impl<UnderlyingCard: UnderlyingCardType + Copy> Game<UnderlyingCard> {
     }
 }
 
-impl<UnderlyingCard: UnderlyingCardType + Copy> Index<CardPosition> for Game<UnderlyingCard> {
+impl<UnderlyingCard: UnderlyingCardType + Copy> Index<CardLocation> for Game<UnderlyingCard> {
     type Output = CardAndVisibility<UnderlyingCard>;
 
-    fn index(&self, card: CardPosition) -> &Self::Output {
+    fn index(&self, card: CardLocation) -> &Self::Output {
         &self.cards[card]
     }
 }
 
-impl<UnderlyingCard: UnderlyingCardType + Copy> IndexMut<CardPosition> for Game<UnderlyingCard> {
-    fn index_mut(&mut self, card: CardPosition) -> &mut Self::Output {
+impl<UnderlyingCard: UnderlyingCardType + Copy> IndexMut<CardLocation> for Game<UnderlyingCard> {
+    fn index_mut(&mut self, card: CardLocation) -> &mut Self::Output {
         &mut self.cards[card]
     }
 }
@@ -519,7 +519,7 @@ impl DeterminizedGame {
                 State::AfterDiscard9Or10 => State::AfterDiscard9Or10,
                 State::AfterDiscardFace => State::AfterDiscardFace,
                 State::AfterDiscardBlackKing => State::AfterDiscardBlackKing,
-                State::AfterBlackKingPeeked(position) => State::AfterBlackKingPeeked(position),
+                State::AfterBlackKingPeeked(location) => State::AfterBlackKingPeeked(location),
                 State::EndOfTurn => State::EndOfTurn,
                 State::EndOfGame => State::EndOfGame,
             },
@@ -608,10 +608,10 @@ impl DeterminizedGame {
         actions.extend(self.cards.enumerate()
             .into_iter()
             // Filter to valid sticks only
-            .filter_map(|(stick_position, card)|
+            .filter_map(|(stick_location, card)|
                 if card.value == card_to_match
                     // Cambio caller cannot be affected by sticks
-                    && self.cambio_caller != Some(stick_position.player as Player)
+                    && self.cambio_caller != Some(stick_location.player as Player)
                 {
                     Some(
                         // Find all players who can see this card and let them stick it
@@ -621,16 +621,17 @@ impl DeterminizedGame {
                                 // You don't have to give away one of your cards even if it's
                                 // another player's card that you stuck
                                 let mut actions = vec![Action::Stick {
-                                    stick_player, stick_position, give_away_position: None
+                                    stick_player,
+                                    stick_location, give_away_location: None
                                 }];
                                 // Stick another player's card
-                                if stick_player != stick_position.player as usize {
+                                if stick_player != stick_location.player as usize {
                                     actions.extend(self.player_card_indices(stick_player)
                                         .map(|index|
                                             Action::Stick {
                                                 stick_player,
-                                                stick_position,
-                                                give_away_position: Some(CardPosition::new(stick_player, index)),
+                                                stick_location,
+                                                give_away_location: Some(CardLocation::new(stick_player, index)),
                                             }
                                         ));
                                 }
@@ -645,7 +646,7 @@ impl DeterminizedGame {
         );
     }
 
-    /// Returns all legal moves from this position.
+    /// Returns all legal moves from this game.
     ///
     /// This excludes what I call "unrealistic sticks", i.e. sticks that someone might reasonably
     /// play. The rule is that, almost always, there is no reason to stick a card you do not know
@@ -664,7 +665,7 @@ impl DeterminizedGame {
                     // Find indices of own cards
                     self.player_card_indices(self.turn)
                         .map(|index|
-                            Action::SwapDrawnCardForOwn(CardPosition::new(self.turn, index))
+                            Action::SwapDrawnCardForOwn(CardLocation::new(self.turn, index))
                         )
                 );
                 actions.push(Action::Discard);
@@ -676,7 +677,7 @@ impl DeterminizedGame {
                     // Find indices of own cards
                     self.player_card_indices(self.turn)
                         .map(|index|
-                            Action::Peek(CardPosition::new(self.turn, index))
+                            Action::Peek(CardLocation::new(self.turn, index))
                         )
                 );
 
@@ -687,14 +688,14 @@ impl DeterminizedGame {
 
             State::AfterDiscard9Or10 | State::AfterDiscardBlackKing => {
                 let mut actions = Vec::from_iter(
-                    self.cards.positions_from_player(0)
+                    self.cards.locations_from_player(0)
                         .into_iter()
                         // Remove own cards
-                        .filter_map(|position|
-                            if position.player == self.turn as u8 {
+                        .filter_map(|location|
+                            if location.player == self.turn as u8 {
                                 None
                             } else {
-                                Some(Action::Peek(position))
+                                Some(Action::Peek(location))
                             }
                         )
                 );
@@ -706,19 +707,19 @@ impl DeterminizedGame {
 
             State::AfterDiscardFace => {
                 let mut actions: Vec<Action> =
-                    self.cards.positions_from_player(0)
+                    self.cards.locations_from_player(0)
                         .into_iter()
-                        .flat_map(|position_a|
-                            self.cards.positions_from_player(position_a.player as Player + 1)
+                        .flat_map(|location_a|
+                            self.cards.locations_from_player(location_a.player as Player + 1)
                                 .into_iter()
-                                .filter_map(|position_b|
+                                .filter_map(|location_b|
                                     // Cambio caller can't be affected by swaps
-                                    if Some(position_a.player as Player) == self.cambio_caller
-                                        || Some(position_b.player as Player) == self.cambio_caller
+                                    if Some(location_a.player as Player) == self.cambio_caller
+                                        || Some(location_b.player as Player) == self.cambio_caller
                                     {
                                         None
                                     } else {
-                                        Some(Action::BlindSwitch(position_a, position_b))
+                                        Some(Action::BlindSwitch(location_a, location_b))
                                     }
                                 )
                                 .collect::<Vec<_>>()
@@ -730,16 +731,16 @@ impl DeterminizedGame {
                 actions
             }
 
-            State::AfterBlackKingPeeked(position) => {
+            State::AfterBlackKingPeeked(location) => {
                 let mut actions =
                     // Cambio caller cannot be affected by swaps
-                    if Some(position.player as Player) == self.cambio_caller {
+                    if Some(location.player as Player) == self.cambio_caller {
                         vec![]
                     } else {
                         Vec::from_iter(
                             self.player_card_indices(self.turn)
                                 .map(|index|
-                                    Action::BlindSwitch(position, CardPosition::new(self.turn, index))
+                                    Action::BlindSwitch(location, CardLocation::new(self.turn, index))
                                 )
                         )
                     };
@@ -789,21 +790,21 @@ impl DeterminizedGame {
                 Ok(())
             }
 
-            (State::AfterDrawing(drawn_card), Action::SwapDrawnCardForOwn(position)) => {
-                if !self.is_valid_position(position) {
-                    return Err(InvalidCardPosition(position));
+            (State::AfterDrawing(drawn_card), Action::SwapDrawnCardForOwn(location)) => {
+                if !self.is_valid_location(location) {
+                    return Err(InvalidCardLocation(location));
                 }
 
-                if position.player != self.turn as u8 {
-                    return Err(CannotSwapWithOther(position));
+                if location.player != self.turn as u8 {
+                    return Err(CannotSwapWithOther(location));
                 }
 
-                // Add the original card at [position] to the discard pile
+                // Add the original card at [location] to the discard pile
                 self.discard_pile.push(
-                    self.cards[position].value
+                    self.cards[location].value
                 );
-                // Replace the card at [position] and indicate it's been seen by this player
-                self.cards[position] =
+                // Replace the card at [location] and indicate it's been seen by this player
+                self.cards[location] =
                     CardAndVisibility::new_seen_by_one(*drawn_card, self.turn);
 
                 self.state = State::EndOfTurn;
@@ -861,8 +862,8 @@ impl PartialInfoGame {
             state: State::BeginningOfTurn
         };
 
-        result[CardPosition::new(0, 2)] = CardAndVisibility::new_seen_by_one(Some(bottom_left), 0);
-        result[CardPosition::new(0, 3)] = CardAndVisibility::new_seen_by_one(Some(bottom_right), 0);
+        result[CardLocation::new(0, 2)] = CardAndVisibility::new_seen_by_one(Some(bottom_left), 0);
+        result[CardLocation::new(0, 3)] = CardAndVisibility::new_seen_by_one(Some(bottom_right), 0);
 
         result
     }
@@ -908,10 +909,10 @@ impl PartialInfoGame {
         // code
         match self.execute_if_common_behavior(action) {
             Ok(true) => {
-                if let Action::Peek(position) = action
+                if let Action::Peek(location) = action
                     && revealed_card.is_some()
                 {
-                    self.cards[position].value = revealed_card;
+                    self.cards[location].value = revealed_card;
                 }
                 return Ok(());
             }
@@ -954,25 +955,25 @@ impl PartialInfoGame {
                 }
             }
 
-            (State::AfterDrawing(drawn_card), Action::SwapDrawnCardForOwn(position)) => {
-                if !self.is_valid_position(position) {
-                    return Err(InvalidCardPosition(position));
+            (State::AfterDrawing(drawn_card), Action::SwapDrawnCardForOwn(location)) => {
+                if !self.is_valid_location(location) {
+                    return Err(InvalidCardLocation(location));
                 }
 
-                if position.player != self.turn as u8 {
-                    return Err(CannotSwapWithOther(position));
+                if location.player != self.turn as u8 {
+                    return Err(CannotSwapWithOther(location));
                 }
 
                 self.state = State::EndOfTurn;
 
-                // Try to find the original card at [position] or get it from [revealed_card]
-                match Card::pick_known(self.cards[position].value, revealed_card) {
+                // Try to find the original card at [location] or get it from [revealed_card]
+                match Card::pick_known(self.cards[location].value, revealed_card) {
                     PickKnownCardResult::Ok(known_replaced_card) => {
-                        // Add the original card at [position] to the discard pile
+                        // Add the original card at [location] to the discard pile
                         self.discard_pile.push(known_replaced_card);
 
-                        // Replace the card at [position] and indicate it's been seen by this player
-                        self.cards[position] =
+                        // Replace the card at [location] and indicate it's been seen by this player
+                        self.cards[location] =
                             CardAndVisibility::new_seen_by_one(drawn_card, self.turn);
 
                         Ok(())
