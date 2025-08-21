@@ -91,7 +91,7 @@ impl Display for Action {
             Action::Discard =>
                 write!(f, "Discard"),
             Action::SwapDrawnCardForOwn(pos) =>
-                write!(f, "Swap for {pos}"),
+                write!(f, "Swap for #{}", pos.index),
             Action::BlindSwitch(a, b) =>
                 write!(f, "Switch {a} and {b}"),
             Action::Peek(pos) =>

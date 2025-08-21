@@ -597,7 +597,7 @@ impl DeterminizedGame {
     ///   that they know to be valid sticks, so if they haven't seen a card they won't try to stick
     ///   it.
     fn extend_with_realistic_sticks(&self, actions: &mut Vec<Action>) {
-        if self.already_stuck {
+        if self.already_stuck || self.discard_pile.is_empty() {
             return;
         }
 
@@ -964,8 +964,6 @@ impl PartialInfoGame {
                     return Err(CannotSwapWithOther(location));
                 }
 
-                self.state = State::EndOfTurn;
-
                 // Try to find the original card at [location] or get it from [revealed_card]
                 match Card::pick_known(self.cards[location].value, revealed_card) {
                     PickKnownCardResult::Ok(known_replaced_card) => {
@@ -975,6 +973,8 @@ impl PartialInfoGame {
                         // Replace the card at [location] and indicate it's been seen by this player
                         self.cards[location] =
                             CardAndVisibility::new_seen_by_one(drawn_card, self.turn);
+
+                        self.state = State::EndOfTurn;
 
                         Ok(())
                     }

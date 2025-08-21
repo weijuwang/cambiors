@@ -133,6 +133,37 @@ fn game_cards(context: &Context) -> String {
         .join("\n")
 }
 
+fn search(context: &mut Context) {
+    let start = Instant::now();
+    match mcts::search_from(&context.game, context.num_playouts, &mut context.rng) {
+        Ok(search_results) => {
+            let micros = start.elapsed().as_micros() as f32;
+
+            println!(
+                "{} ({} playouts, {} us/playout)",
+                paint_yellow_bold("Search results"),
+                context.num_playouts,
+                micros / context.num_playouts as f32
+            );
+            println!(
+                "  {}: {}%",
+                paint_yellow_bold("From root"),
+                (search_results.root_winrate * 100.).round()
+            );
+            for (action, winrate) in search_results.non_stick_actions {
+                println!("    {action}: {}%", (winrate * 100.).round());
+            }
+            println!("  {}", paint_yellow_bold("Sticks"));
+            for (action, winrate) in search_results.sticks {
+                println!("    {action}: {}%", (winrate * 100.).round());
+            }
+        }
+        Err(reason) => {
+            println!("Can't search: {reason}")
+        }
+    }
+}
+
 fn main() -> Result<()> {
     let cmd_args = Args::parse();
     let context = Context {
@@ -210,35 +241,7 @@ fn main() -> Result<()> {
                 .about("Performs a Monte Carlo tree search.")
                 .aliases(["mcts", "montecarlo"]),
             |_, context| {
-                let start = Instant::now();
-                match mcts::search_from(&context.game, context.num_playouts, &mut context.rng) {
-                    Ok(search_results) => {
-                        let micros = start.elapsed().as_micros() as f32;
-
-                        println!(
-                            "{} ({} playouts, {} us/playout)",
-                            paint_yellow_bold("Search results"),
-                            context.num_playouts,
-                            micros / context.num_playouts as f32
-                        );
-                        println!(
-                            "  {}: {}%",
-                            paint_yellow_bold("From root"),
-                            (search_results.root_winrate * 100.).round()
-                        );
-                        for (action, winrate) in search_results.non_stick_actions {
-                            println!("    {action}: {}%", (winrate * 100.).round());
-                        }
-                        println!("  {}", paint_yellow_bold("Sticks"));
-                        for (action, winrate) in search_results.sticks {
-                            println!("    {action}: {}%", (winrate * 100.).round());
-                        }
-                    }
-                    Err(reason) => {
-                        println!("Can't search: {reason}")
-                    }
-                }
-
+                search(context);
                 Ok(None)
             }
         )
@@ -295,7 +298,7 @@ fn main() -> Result<()> {
         )
 
         .with_command(
-            Command::new("discard")
+            Command::new("disc")
                 .about("Discards the card that was just drawn.")
                 .arg(
                     Arg::new("discarded-card")
@@ -418,7 +421,7 @@ fn main() -> Result<()> {
         )
 
         .with_command(
-            Command::new("call-cambio")
+            Command::new("cambio")
                 .about("Calls Cambio, beginning the endgame."),
             |_, context| {
                 context.next_action = Some((cambio::Action::CallCambio, None));
@@ -436,7 +439,7 @@ fn main() -> Result<()> {
         )
 
         .with_command(
-            Command::new("end-turn")
+            Command::new("next")
                 .about("Ends this turn."),
             |_, context| {
                 context.next_action = Some((cambio::Action::EndTurn, None));
