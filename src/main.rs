@@ -438,7 +438,7 @@ fn main() -> Result<()> {
         )
 
         .with_command(
-            Command::new("next")
+            Command::new("end")
                 .about("Ends this turn."),
             |_, context| {
                 context.next_action = Some((cambio::Action::EndTurn, None));
