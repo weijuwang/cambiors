@@ -237,9 +237,8 @@ fn main() -> Result<()> {
         )
 
         .with_command(
-            Command::new("search")
-                .about("Performs a Monte Carlo tree search.")
-                .aliases(["mcts", "montecarlo"]),
+            Command::new("mcts")
+                .about("Performs a Monte Carlo tree search."),
             |_, context| {
                 search(context);
                 Ok(None)
