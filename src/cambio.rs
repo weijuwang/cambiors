@@ -97,7 +97,7 @@ impl Display for Action {
             Action::Peek(pos) =>
                 write!(f, "Peek {pos}"),
             Action::Stick { stick_player, stick_location, give_away_location } =>
-                write!(f, "Stick  {stick_location} by {stick_player}{}",
+                write!(f, "Stick  {stick_location} by P{stick_player}{}",
                        if let Some(give_away_location) = give_away_location {
                         format!(", give-away {give_away_location}")
                     } else {

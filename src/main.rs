@@ -71,10 +71,11 @@ struct Context {
 
 fn game_as_string(context: &Context) -> String {
     let top_line = format!(
-        "Turn {}/{}  {} to draw  {} discarded",
+        "Turn {}/{}  {} to draw (avg {:.1})  {} discarded",
         context.game.turn(),
         context.game.num_players(),
         context.game.draw_deck_size(),
+        context.game.avg_unseen(),
         context.game.discard_pile().len()
     );
 

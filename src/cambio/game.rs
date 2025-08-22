@@ -865,8 +865,7 @@ impl PartialInfoGame {
 
         // Revealed a card that cannot be in [unseen_cards]?
         if let Some(revealed_card) = revealed_card
-            && self.remove_from_unseen(revealed_card)
-            .is_err()
+            && !self.unseen_cards.contains(&revealed_card)
         {
             return Err(ImpossibleUnseenCard(revealed_card));
         }
@@ -875,6 +874,10 @@ impl PartialInfoGame {
             (State::BeginningOfTurn, Action::Draw) => {
                 self.draw_deck_size -= 1;
                 self.state = State::AfterDrawing(revealed_card);
+                if let Some(revealed_card) = revealed_card {
+                    self.remove_from_unseen(revealed_card)
+                        .expect("Revealed card isn't in unseen cards");
+                }
                 Ok(())
             }
 
@@ -883,6 +886,10 @@ impl PartialInfoGame {
                     PickKnownCardResult::Ok(known_drawn_card) => {
                         self.discard_pile.push(known_drawn_card);
                         self.state = Self::state_after_discarding(known_drawn_card);
+                        if let Some(revealed_card) = revealed_card {
+                            self.remove_from_unseen(revealed_card)
+                                .expect("Revealed card isn't in unseen cards");
+                        }
                         Ok(())
                     }
                     PickKnownCardResult::Conflicting(actual_card, attested_card) => {
@@ -914,6 +921,11 @@ impl PartialInfoGame {
                             CardAndVisibility::new_seen_by_one(drawn_card, self.turn);
 
                         self.state = State::EndOfTurn;
+
+                        if let Some(revealed_card) = revealed_card {
+                            self.remove_from_unseen(revealed_card)
+                                .expect("Revealed card isn't in unseen cards");
+                        }
 
                         Ok(())
                     }
