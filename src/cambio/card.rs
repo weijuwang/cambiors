@@ -106,7 +106,7 @@ impl FromStr for Card {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.trim().to_uppercase().as_str() {
-            "A" | "1" => Ok(Card::Ace),
+            "A" | "1" | "ACE" => Ok(Card::Ace),
             "2" => Ok(Card::Two),
             "3" => Ok(Card::Three),
             "4" => Ok(Card::Four),
@@ -116,10 +116,10 @@ impl FromStr for Card {
             "8" => Ok(Card::Eight),
             "9" => Ok(Card::Nine),
             "X" | "10" => Ok(Card::Ten),
-            "J" => Ok(Card::Jack),
-            "Q" => Ok(Card::Queen),
-            "B" | "BK" => Ok(Card::BlackKing),
-            "R" | "RK" | "-1" => Ok(Card::RedKing),
+            "J" | "JACK" => Ok(Card::Jack),
+            "Q" | "QUEEN" => Ok(Card::Queen),
+            "B" | "BK" | "KB" => Ok(Card::BlackKing),
+            "R" | "RK" | "KR" | "-1" => Ok(Card::RedKing),
             "0" | "JOKER" => Ok(Card::Joker),
             _ => Err(clap::Error::raw(clap::error::ErrorKind::ValueValidation, "Not a card type")),
         }

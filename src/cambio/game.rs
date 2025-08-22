@@ -257,80 +257,19 @@ impl<UnderlyingCard: UnderlyingCardType + Copy> Game<UnderlyingCard> {
                     return Err(StickOnEmptyDiscardPile(stick_location));
                 }
 
-                // If a card was peeked previously in preparation for a black king swap, we may need to
-                // adjust the index of that card so it still points to the same card
-                /*
-                The purpose of this code is to prevent the following scenario:
-
-                Alice discards a black king and peeks at one of Bob's cards. Before Alice can decide
-                what to do with it, one of the following happens:
-                A: Any player sticks one of Bob's other cards. Since Bob now has one less card, any
-                  [CardLocation] pointing to one of Bob's cards might not point to the same card it
-                  originally did -- elements shift when one is removed. Therefore, we need to update the
-                  state so the location points to the same card.
-                B: Any player sticks the card that Alice peeked. (This scenario applies to the code for
-                  [StickWithoutGiveAway] above as well.) Alice needs to choose a new card.
-                C: Bob sticks someone else's card and gives away the card Alice peeked. The location of
-                  the card Alice peeked at needs to be updated to point to the same card now belonging
-                  to a different player.
-
-                TODO Is there seriously not a better way to do this? Maybe immut reference to card instead
-                of card locations? I'm basically managing pointers manually which is not very safe
-                 */
+                // TODO Update implementation to match rules -- currently ends turn
                 // If a card was peeked previously in preparation for a black king swap, we may need to
                 // adjust the index of that card so it still points to the same card
                 if let State::AfterBlackKingPeeked(peeked_location) = self.state {
-                    if peeked_location.player == stick_location.player {
-                        // If the peeked card and the stuck card belong to the same player
-                        match peeked_location.index.cmp(&stick_location.index) {
-                            Ordering::Less => {}
-                            // ~~~ SCENARIO B ~~~
-                            // `stick_location == peeked_location`
-                            // The card that got peeked at got stuck
-                            // Let the player peek another one
-                            Ordering::Equal => {
-                                self.state = State::AfterDiscardBlackKing
-                            }
-                            // ~~~ SCENARIO A ~~~
-                            // [peeked_location] points to something different from what it did originally
-                            // because everything got shifted over
-                            Ordering::Greater => {
-                                self.state = State::AfterBlackKingPeeked(CardLocation {
-                                    player: peeked_location.player,
-                                    index: peeked_location.index - 1
-                                })
-                            }
-                        }
+                    if peeked_location.player == stick_location.player
+                        && peeked_location.index >= stick_location.index
+                    {
+                        self.state = State::EndOfTurn;
                     } else if let Some(give_away_location) = give_away_location
                         && peeked_location.player == give_away_location.player
+                        && peeked_location.index >= stick_location.index
                     {
-                        // If the peeked card and the give-away card belong to the same player
-                        match peeked_location.index.cmp(&stick_location.index) {
-                            Ordering::Less => {}
-                            // ~~~ SCENARIO C ~~~
-                            // `stick_location == give_away_location`
-                            // The peeked card was given away
-                            Ordering::Equal => {
-                                self.state = State::AfterBlackKingPeeked(CardLocation {
-                                    // The peeked card has been given away to the player whose
-                                    // card was stuck
-                                    player: stick_location.player,
-                                    // This is the CURRENT number of cards they have; they will have
-                                    // one more than this after the give-away
-                                    index: self.cards[stick_location.player as Player]
-                                        .len() as u8
-                                })
-                            }
-                            // ~~~ SCENARIO A ~~
-                            // [peeked_location] points to something different from what it
-                            // did originally because everything got shifted over
-                            Ordering::Greater => {
-                                self.state = State::AfterBlackKingPeeked(CardLocation {
-                                    player: peeked_location.player,
-                                    index: peeked_location.index - 1
-                                })
-                            }
-                        }
+                        self.state = State::EndOfTurn;
                     }
                 }
 
